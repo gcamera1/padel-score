@@ -214,7 +214,7 @@ private fun CounterScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                        .padding(horizontal = if (isSmall) 6.dp else 10.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
                     // Rival (arriba)
@@ -237,7 +237,8 @@ private fun CounterScreen(
                             bigScore = bigScore,
                             smallSize = smallSize,
                             // Subimos un poco el score de Rival para que quede centrado en su mitad sin el título
-                            pointsYOffset = if (isSmall) (-4).dp else (-6).dp
+                            pointsYOffset = if (isSmall) (-4).dp else (-6).dp,
+                            gamesXOffset = if (isSmall) 6.dp else 2.dp
                         )
                     }
 
@@ -259,7 +260,8 @@ private fun CounterScreen(
                             pointsText = pointsLabel(state, isMe = true),
                             pointsColor = myGreen,
                             bigScore = bigScore,
-                            smallSize = smallSize
+                            smallSize = smallSize,
+                            gamesXOffset = if (isSmall) 6.dp else 2.dp
                         )
                     }
                 }
@@ -322,7 +324,8 @@ private fun ScoreLine(
     pointsColor: Color,
     bigScore: androidx.compose.ui.unit.TextUnit,
     smallSize: androidx.compose.ui.unit.TextUnit,
-    pointsYOffset: Dp = 0.dp
+    pointsYOffset: Dp = 0.dp,
+    gamesXOffset: Dp = 0.dp
 ) {
     // Box para que los puntos queden centrados y los games a la derecha sin mover el centro.
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -345,7 +348,7 @@ private fun ScoreLine(
             text = "G$games",
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .padding(end = 2.dp),
+                .offset(x = gamesXOffset),
             fontWeight = FontWeight.SemiBold,
             fontSize = smallSize,
             color = Color.White.copy(alpha = 0.9f),

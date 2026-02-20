@@ -129,7 +129,6 @@ private fun CounterScreen(
     // Cero padding en 40mm para evitar “borde negro” y que la cancha ocupe el máximo
     val padding = if (isSmall) 0.dp else 1.dp
     val bigScore = if (isSmall) 38.sp else 54.sp
-    val titleSize = if (isSmall) 12.sp else 16.sp
     val smallSize = if (isSmall) 12.sp else 15.sp
 
     val myGreen = Color(0xFF00C853)
@@ -232,13 +231,13 @@ private fun CounterScreen(
                         highlightColor = oppRed.copy(alpha = 0.18f)
                     ) {
                         ScoreLine(
-                            title = "",
-                            titleSize = titleSize,
                             games = state.oppGames,
                             pointsText = pointsLabel(state, isMe = false),
                             pointsColor = oppRed,
                             bigScore = bigScore,
-                            smallSize = smallSize
+                            smallSize = smallSize,
+                            // Subimos un poco el score de Rival para que quede centrado en su mitad sin el título
+                            pointsYOffset = if (isSmall) (-4).dp else (-6).dp
                         )
                     }
 
@@ -256,8 +255,6 @@ private fun CounterScreen(
                         highlightColor = myGreen.copy(alpha = 0.18f)
                     ) {
                         ScoreLine(
-                            title = "",
-                            titleSize = titleSize,
                             games = state.myGames,
                             pointsText = pointsLabel(state, isMe = true),
                             pointsColor = myGreen,
@@ -274,29 +271,26 @@ private fun CounterScreen(
 
 @Composable
 private fun ScoreLine(
-    title: String,
-    titleSize: androidx.compose.ui.unit.TextUnit,
     games: Int,
     pointsText: String,
     pointsColor: Color,
     bigScore: androidx.compose.ui.unit.TextUnit,
-    smallSize: androidx.compose.ui.unit.TextUnit
+    smallSize: androidx.compose.ui.unit.TextUnit,
+    pointsYOffset: Dp = 0.dp
 ) {
-    // Usamos un Box para que los puntos queden SIEMPRE centrados en pantalla,
-    // y los games se peguen a la derecha sin correrte el centro.
+    // Box para que los puntos queden centrados y los games a la derecha sin mover el centro.
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = title, fontWeight = FontWeight.SemiBold, fontSize = titleSize, maxLines = 1)
-            Spacer(Modifier.height(2.dp))
             Text(
                 text = pointsText,
                 fontWeight = FontWeight.ExtraBold,
                 color = pointsColor,
                 fontSize = bigScore,
-                maxLines = 1
+                maxLines = 1,
+                modifier = Modifier.offset(y = pointsYOffset)
             )
         }
 

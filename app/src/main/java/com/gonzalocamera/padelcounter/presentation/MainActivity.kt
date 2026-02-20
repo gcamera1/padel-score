@@ -493,30 +493,44 @@ private fun SettingsScreen(
                 ) {
                     val (_, label, dotColor) = choices[currentIdx]
 
-                    Chip(
-                        onClick = {
-                            val nextIdx = (currentIdx + 1) % choices.size
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onCourtColorChange(choices[nextIdx].first)
-                        },
-                        label = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(RoundedCornerShape(50))
-                                        .background(dotColor)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(label)
+                    AnimatedContent(
+                        targetState = currentIdx,
+                        transitionSpec = {
+                            val direction = if (targetState > initialState) {
+                                slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                            } else {
+                                slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
                             }
+                            direction togetherWith slideOutHorizontally(targetOffsetX = { if (targetState > initialState) -it else it }) + fadeOut()
                         },
                         modifier = Modifier.fillMaxWidth()
-                    )
+                    ) { idx ->
+                        val (_, lbl, clr) = choices[idx]
+                        Chip(
+                            onClick = {
+                                val nextIdx = (currentIdx + 1) % choices.size
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onCourtColorChange(choices[nextIdx].first)
+                            },
+                            label = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .clip(RoundedCornerShape(50))
+                                            .background(clr)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(lbl)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),

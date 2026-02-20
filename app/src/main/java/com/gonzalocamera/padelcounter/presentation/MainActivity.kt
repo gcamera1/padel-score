@@ -264,10 +264,56 @@ private fun CounterScreen(
                     }
                 }
             }
+            // Hint visual para indicar swipe a Ajustes (fuera del clip de la cancha)
+            SwipeToSettingsHint(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 1.dp)
+            )
         }
     }
 }
 
+
+
+@Composable
+private fun SwipeToSettingsHint(
+    modifier: Modifier = Modifier,
+) {
+    // Pequeño indicador: puntitos + chevron. Sin padding externo para no “achicar” la UI.
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.Black.copy(alpha = 0.18f))
+            .padding(horizontal = 4.dp, vertical = 5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        // Tres puntitos verticales
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            repeat(3) {
+                Box(
+                    modifier = Modifier
+                        .size(3.5.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.55f))
+                )
+            }
+        }
+
+        // Chevron hacia la izquierda (swipe hacia la izquierda para abrir)
+        Text(
+            text = "‹",
+            color = Color.White.copy(alpha = 0.60f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
+        // (El engranaje fue removido para hacerlo más finito)
+    }
+}
 
 @Composable
 private fun ScoreLine(

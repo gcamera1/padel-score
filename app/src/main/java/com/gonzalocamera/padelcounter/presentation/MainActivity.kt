@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -55,36 +56,57 @@ private fun PadelApp() {
 
     var screen by remember { mutableStateOf(Screen.COUNTER) }
 
-    when (screen) {
-        Screen.COUNTER -> CounterScreen(
-            state = state,
-            onSave = { scope.launch { repo.save(it) } },
-            onOpenSettings = { screen = Screen.SETTINGS }
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = screen == Screen.COUNTER,
+            enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            CounterScreen(
+                state = state,
+                onSave = { scope.launch { repo.save(it) } },
+                onOpenSettings = { screen = Screen.SETTINGS }
+            )
+        }
 
-        Screen.SETTINGS -> SettingsScreen(
-            state = state,
-            onToggleKeepOn = { scope.launch { repo.setKeepScreenOn(it) } },
-            onCourtColorChange = { scope.launch { repo.setCourtColor(it) } },
-            onNewMatch = { screen = Screen.NEW_MATCH },
-            onBack = { screen = Screen.COUNTER }
-        )
+        AnimatedVisibility(
+            visible = screen == Screen.SETTINGS,
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            SettingsScreen(
+                state = state,
+                onToggleKeepOn = { scope.launch { repo.setKeepScreenOn(it) } },
+                onCourtColorChange = { scope.launch { repo.setCourtColor(it) } },
+                onNewMatch = { screen = Screen.NEW_MATCH },
+                onBack = { screen = Screen.COUNTER }
+            )
+        }
 
-        Screen.NEW_MATCH -> NewMatchScreen(
-            initialGolden = state.goldenPoint,
-            initialDecider = state.decider,
-            onConfirm = { decider, golden ->
-                scope.launch {
-                    repo.resetMatchWithConfig(
-                        decider = decider,
-                        goldenPoint = golden,
-                        courtColor = state.courtColor
-                    )
-                }
-                screen = Screen.COUNTER
-            },
-            onCancel = { screen = Screen.SETTINGS }
-        )
+        AnimatedVisibility(
+            visible = screen == Screen.NEW_MATCH,
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            NewMatchScreen(
+                initialGolden = state.goldenPoint,
+                initialDecider = state.decider,
+                onConfirm = { decider, golden ->
+                    scope.launch {
+                        repo.resetMatchWithConfig(
+                            decider = decider,
+                            goldenPoint = golden,
+                            courtColor = state.courtColor
+                        )
+                    }
+                    screen = Screen.COUNTER
+                },
+                onCancel = { screen = Screen.SETTINGS }
+            )
+        }
     }
 }
 

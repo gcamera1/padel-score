@@ -13,7 +13,10 @@
       "Bash(ls:*)",
       "Bash(file:*)",
       "Bash(./gradlew assembleDebug:*)",
-      "Bash(./gradlew assembleRelease:*)"
+      "Bash(./gradlew assembleRelease:*)",
+      "Bash(./gradlew installDebug:*)",
+      "Bash(adb shell:*)",
+      "Bash($HOME/Library/Android/sdk/platform-tools/adb shell:*)"
     ]
   }
 }

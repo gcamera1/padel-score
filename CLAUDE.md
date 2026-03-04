@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Padel Score — a Wear OS (Android) app for tracking padel tennis scores. Kotlin + Jetpack Compose, targeting 40mm+ watches (API 30-35).
+Padel Score — a Wear OS (Android) app for tracking padel tennis scores. Kotlin + Jetpack Compose, targeting 40mm+ watches (API 30-34).
 
 ## Build & Test Commands
 

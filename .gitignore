@@ -9,6 +9,8 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+# Paparazzi screenshot snapshots (local only)
+app/src/test/snapshots/
 /captures
 .externalNativeBuild
 .cxx

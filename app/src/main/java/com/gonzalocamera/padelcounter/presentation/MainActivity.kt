@@ -32,6 +32,77 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import androidx.compose.foundation.background
 
+/**
+ * Layout metrics calculated from screen size and shape (round vs square).
+ * Ensures the court rectangle fits inside the circular display on round watches.
+ *
+ * Round safe area math: for a circle of diameter D, a centered rectangle (W×H)
+ * fits when (W/D)² + (H/D)² ≤ 1.0
+ */
+internal data class ScreenMetrics(
+    val isSmall: Boolean,
+    val isRound: Boolean,
+    val courtWidthFraction: Float,
+    val courtHeightFraction: Float,
+    val bigScore: androidx.compose.ui.unit.TextUnit,
+    val smallSize: androidx.compose.ui.unit.TextUnit,
+    val courtRadius: Dp,
+    val courtPadding: Dp,
+    val courtHorizontalPadding: Dp,
+    val pointsYOffset: Dp,
+    val gamesXOffset: Dp,
+    val hintEndPadding: Dp
+)
+
+@Composable
+internal fun rememberScreenMetrics(): ScreenMetrics {
+    val config = LocalConfiguration.current
+    val minDp = minOf(config.screenWidthDp, config.screenHeightDp)
+    val isSmall = minDp <= 200
+    val isRound = config.isScreenRound
+
+    return remember(minDp, isRound) {
+        when {
+            isSmall && isRound -> ScreenMetrics(
+                isSmall = true, isRound = true,
+                courtWidthFraction = 0.68f, courtHeightFraction = 0.72f,
+                bigScore = 34.sp, smallSize = 11.sp,
+                courtRadius = 16.dp, courtPadding = 0.dp,
+                courtHorizontalPadding = 4.dp,
+                pointsYOffset = (-3).dp, gamesXOffset = (-4).dp,
+                hintEndPadding = 10.dp
+            )
+            isSmall && !isRound -> ScreenMetrics(
+                isSmall = true, isRound = false,
+                courtWidthFraction = 0.88f, courtHeightFraction = 0.82f,
+                bigScore = 38.sp, smallSize = 12.sp,
+                courtRadius = 14.dp, courtPadding = 0.dp,
+                courtHorizontalPadding = 6.dp,
+                pointsYOffset = (-4).dp, gamesXOffset = 6.dp,
+                hintEndPadding = 1.dp
+            )
+            !isSmall && isRound -> ScreenMetrics(
+                isSmall = false, isRound = true,
+                courtWidthFraction = 0.62f, courtHeightFraction = 0.72f,
+                bigScore = 42.sp, smallSize = 13.sp,
+                courtRadius = 18.dp, courtPadding = 1.dp,
+                courtHorizontalPadding = 8.dp,
+                pointsYOffset = (-5).dp, gamesXOffset = (-4).dp,
+                hintEndPadding = 12.dp
+            )
+            else -> ScreenMetrics( // large square
+                isSmall = false, isRound = false,
+                courtWidthFraction = 0.60f, courtHeightFraction = 0.78f,
+                bigScore = 54.sp, smallSize = 15.sp,
+                courtRadius = 18.dp, courtPadding = 1.dp,
+                courtHorizontalPadding = 10.dp,
+                pointsYOffset = (-6).dp, gamesXOffset = 2.dp,
+                hintEndPadding = 1.dp
+            )
+        }
+    }
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,24 +183,15 @@ private fun PadelApp() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CounterScreen(
+internal fun CounterScreen(
     state: PadelState,
     onSave: (PadelState) -> Unit,
     onOpenSettings: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
-    val config = LocalConfiguration.current
+    val metrics = rememberScreenMetrics()
     // Evita capturar un estado viejo en los handlers de tap (en Wear puede recomposear más lento)
     val latestState by rememberUpdatedState(state)
-
-    // Responsive: priorizar 40mm
-    val minDp = minOf(config.screenWidthDp, config.screenHeightDp)
-    val isSmall = minDp <= 200 // priorizar 40mm
-
-    // Cero padding en 40mm para evitar “borde negro” y que la cancha ocupe el máximo
-    val padding = if (isSmall) 0.dp else 1.dp
-    val bigScore = if (isSmall) 38.sp else 54.sp
-    val smallSize = if (isSmall) 12.sp else 15.sp
 
     val myGreen = Color(0xFF00C853)
     val oppRed = Color(0xFFFF5252)
@@ -144,7 +206,7 @@ private fun CounterScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(metrics.courtPadding)
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = { dragAccum = 0f },
@@ -159,27 +221,21 @@ private fun CounterScreen(
                     )
                 }
         ) {
-            // Caja de cancha: que ocupe casi toda el área útil (prioridad 40mm)
-            // (el “borde negro” venía de achicar demasiado la caja y además volver a achicar adentro)
-            val courtW = if (isSmall) 0.88f else 0.60f
-            val courtH = if (isSmall) 0.82f else 0.78f
-            val courtRadius = if (isSmall) 14.dp else 18.dp
-
             val courtModifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxWidth(courtW)
-                .fillMaxHeight(courtH)
-                .clip(RoundedCornerShape(courtRadius))
+                .fillMaxWidth(metrics.courtWidthFraction)
+                .fillMaxHeight(metrics.courtHeightFraction)
+                .clip(RoundedCornerShape(metrics.courtRadius))
 
             Box(modifier = courtModifier) {
                 // Fondo cancha
                 CourtBackgroundVertical(
                     courtColor = courtColorToColor(state.courtColor),
-                    isSmall = isSmall,
+                    isSmall = metrics.isSmall,
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Sets a la izquierda, pero DENTRO de la cancha.
+                // Sets a la izquierda, DENTRO de la cancha.
                 Column(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
@@ -191,21 +247,21 @@ private fun CounterScreen(
                         text = state.oppSets.toString(),
                         color = oppRed,
                         fontWeight = FontWeight.Bold,
-                        fontSize = smallSize,
+                        fontSize = metrics.smallSize,
                         maxLines = 1
                     )
                     Text(
                         text = "-",
                         color = Color.White.copy(alpha = 0.8f),
                         fontWeight = FontWeight.Bold,
-                        fontSize = smallSize,
+                        fontSize = metrics.smallSize,
                         maxLines = 1
                     )
                     Text(
                         text = state.mySets.toString(),
                         color = myGreen,
                         fontWeight = FontWeight.Bold,
-                        fontSize = smallSize,
+                        fontSize = metrics.smallSize,
                         maxLines = 1
                     )
                 }
@@ -214,7 +270,7 @@ private fun CounterScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = if (isSmall) 6.dp else 10.dp, vertical = 8.dp),
+                        .padding(horizontal = metrics.courtHorizontalPadding, vertical = 8.dp),
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
                     // Rival (arriba)
@@ -234,11 +290,10 @@ private fun CounterScreen(
                             games = state.oppGames,
                             pointsText = pointsLabel(state, isMe = false),
                             pointsColor = oppRed,
-                            bigScore = bigScore,
-                            smallSize = smallSize,
-                            // Subimos un poco el score de Rival para que quede centrado en su mitad sin el título
-                            pointsYOffset = if (isSmall) (-4).dp else (-6).dp,
-                            gamesXOffset = if (isSmall) 6.dp else 2.dp
+                            bigScore = metrics.bigScore,
+                            smallSize = metrics.smallSize,
+                            pointsYOffset = metrics.pointsYOffset,
+                            gamesXOffset = metrics.gamesXOffset
                         )
                     }
 
@@ -259,9 +314,9 @@ private fun CounterScreen(
                             games = state.myGames,
                             pointsText = pointsLabel(state, isMe = true),
                             pointsColor = myGreen,
-                            bigScore = bigScore,
-                            smallSize = smallSize,
-                            gamesXOffset = if (isSmall) 6.dp else 2.dp
+                            bigScore = metrics.bigScore,
+                            smallSize = metrics.smallSize,
+                            gamesXOffset = metrics.gamesXOffset
                         )
                     }
                 }
@@ -270,7 +325,7 @@ private fun CounterScreen(
             SwipeToSettingsHint(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 1.dp)
+                    .padding(end = metrics.hintEndPadding)
             )
         }
     }
@@ -282,7 +337,7 @@ private fun CounterScreen(
 private fun SwipeToSettingsHint(
     modifier: Modifier = Modifier,
 ) {
-    // Pequeño indicador: puntitos + chevron. Sin padding externo para no “achicar” la UI.
+    // Pequeño indicador: puntitos + chevron. Sin padding externo para no "achicar" la UI.
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
@@ -402,10 +457,10 @@ private fun TapZone(
 }
 
 /**
- * Cancha vertical “más real”:
+ * Cancha vertical "más real":
  * - Net al centro.
  * - Línea de saque a 3m del net (sobre 10m de media cancha) => 3/10 del semialto.
- * Importante: NO achicar otra vez adentro, porque eso reintroduce el “padding”/borde negro.
+ * Importante: NO achicar otra vez adentro, porque eso reintroduce el "padding"/borde negro.
  */
 @Composable
 private fun CourtBackgroundVertical(
@@ -413,7 +468,7 @@ private fun CourtBackgroundVertical(
     isSmall: Boolean,
     modifier: Modifier = Modifier
 ) {
-    // Importante: NO achicar otra vez adentro, porque eso reintroduce el “padding”/borde negro.
+    // Importante: NO achicar otra vez adentro, porque eso reintroduce el "padding"/borde negro.
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -448,7 +503,7 @@ private fun CourtBackgroundVertical(
     }
 }
 
-private fun courtColorToColor(opt: CourtColorOption): Color = when (opt) {
+internal fun courtColorToColor(opt: CourtColorOption): Color = when (opt) {
     CourtColorOption.BLUE -> Color(0xFF1976D2)
     CourtColorOption.ORANGE -> Color(0xFFF55600)
     CourtColorOption.GREEN -> Color(0xFF2E7D32)

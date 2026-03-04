@@ -373,4 +373,60 @@ class PadelLogicTest {
         assertThat(state.myPointsIdx).isEqualTo(0)
         assertThat(state.oppPointsIdx).isEqualTo(0)
     }
+
+    // ── Subtract game tests ──
+
+    @Test
+    fun `subtract game from my when both points are zero`() {
+        val state = PadelState(myGames = 3, oppGames = 2, myPointsIdx = 0, oppPointsIdx = 0)
+        val result = subtractPointFromMy(state)
+        assertThat(result.myGames).isEqualTo(2)
+        assertThat(result.oppGames).isEqualTo(2)
+    }
+
+    @Test
+    fun `subtract game from opp when both points are zero`() {
+        val state = PadelState(myGames = 3, oppGames = 2, myPointsIdx = 0, oppPointsIdx = 0)
+        val result = subtractPointFromOpp(state)
+        assertThat(result.oppGames).isEqualTo(1)
+        assertThat(result.myGames).isEqualTo(3)
+    }
+
+    @Test
+    fun `subtract game does nothing when games already zero`() {
+        val state = PadelState(myGames = 0, oppGames = 0, myPointsIdx = 0, oppPointsIdx = 0)
+        val result = subtractPointFromMy(state)
+        assertThat(result.myGames).isEqualTo(0)
+    }
+
+    @Test
+    fun `subtract does not remove game when points are not both zero`() {
+        val state = PadelState(myGames = 3, oppGames = 2, myPointsIdx = 1, oppPointsIdx = 0)
+        val result = subtractPointFromMy(state)
+        assertThat(result.myGames).isEqualTo(3)
+        assertThat(result.myPointsIdx).isEqualTo(0) // 15 -> 0
+    }
+
+    @Test
+    fun `subtract game in tie-break when both tb points are zero`() {
+        val state = PadelState(
+            myGames = 6, oppGames = 6,
+            inTieBreak = true, myTbPoints = 0, oppTbPoints = 0
+        )
+        val result = subtractPointFromMy(state)
+        assertThat(result.myGames).isEqualTo(5)
+        assertThat(result.inTieBreak).isFalse()
+    }
+
+    @Test
+    fun `subtract tb point does not remove game when tb points not both zero`() {
+        val state = PadelState(
+            myGames = 6, oppGames = 6,
+            inTieBreak = true, myTbPoints = 2, oppTbPoints = 3
+        )
+        val result = subtractPointFromMy(state)
+        assertThat(result.myTbPoints).isEqualTo(1)
+        assertThat(result.myGames).isEqualTo(6)
+        assertThat(result.inTieBreak).isTrue()
+    }
 }

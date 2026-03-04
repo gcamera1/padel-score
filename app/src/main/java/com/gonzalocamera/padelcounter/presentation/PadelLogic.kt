@@ -39,18 +39,47 @@ fun addPointToOpp(state: PadelState): PadelState =
 
 fun subtractPointFromMy(state: PadelState): PadelState {
     return if (state.inTieBreak) {
-        state.copy(myTbPoints = (state.myTbPoints - 1).coerceAtLeast(0))
+        if (state.myTbPoints == 0 && state.oppTbPoints == 0) {
+            // Descontar game (salir del tie-break) si ambos TB points en 0
+            subtractGame(state, me = true)
+        } else {
+            state.copy(myTbPoints = (state.myTbPoints - 1).coerceAtLeast(0))
+        }
     } else {
-        state.copy(myPointsIdx = decIdx(state.myPointsIdx))
+        if (state.myPointsIdx == 0 && state.oppPointsIdx == 0) {
+            subtractGame(state, me = true)
+        } else {
+            state.copy(myPointsIdx = decIdx(state.myPointsIdx))
+        }
     }
 }
 
 fun subtractPointFromOpp(state: PadelState): PadelState {
     return if (state.inTieBreak) {
-        state.copy(oppTbPoints = (state.oppTbPoints - 1).coerceAtLeast(0))
+        if (state.myTbPoints == 0 && state.oppTbPoints == 0) {
+            subtractGame(state, me = false)
+        } else {
+            state.copy(oppTbPoints = (state.oppTbPoints - 1).coerceAtLeast(0))
+        }
     } else {
-        state.copy(oppPointsIdx = decIdx(state.oppPointsIdx))
+        if (state.myPointsIdx == 0 && state.oppPointsIdx == 0) {
+            subtractGame(state, me = false)
+        } else {
+            state.copy(oppPointsIdx = decIdx(state.oppPointsIdx))
+        }
     }
+}
+
+private fun subtractGame(state: PadelState, me: Boolean): PadelState {
+    val games = if (me) state.myGames else state.oppGames
+    if (games <= 0) return state
+    // Si estamos en tie-break (6-6) y descuento un game, salimos del tie-break
+    val newState = if (state.inTieBreak) {
+        state.copy(inTieBreak = false, myTbPoints = 0, oppTbPoints = 0)
+    } else {
+        state
+    }
+    return if (me) newState.copy(myGames = games - 1) else newState.copy(oppGames = games - 1)
 }
 
 private fun decIdx(idx: Int): Int = when {

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(./gradlew build:*)",
+      "Bash(xxd:*)",
+      "Bash(LC_ALL=C sed:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew recordPaparazziDebug:*)",
+      "Bash(jar tf:*)",
+      "Bash(javap:*)",
+      "Bash(./gradlew testDebugUnitTest:*)"
+    ]
+  }
+}

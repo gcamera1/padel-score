@@ -70,7 +70,7 @@ internal fun rememberScreenMetrics(): ScreenMetrics {
                 courtRadius = 16.dp, courtPadding = 0.dp,
                 courtHorizontalPadding = 4.dp,
                 pointsYOffset = (-3).dp, gamesXOffset = (-4).dp,
-                hintEndPadding = 10.dp
+                hintEndPadding = 14.dp
             )
             isSmall && !isRound -> ScreenMetrics(
                 isSmall = true, isRound = false,
@@ -88,7 +88,7 @@ internal fun rememberScreenMetrics(): ScreenMetrics {
                 courtRadius = 18.dp, courtPadding = 1.dp,
                 courtHorizontalPadding = 8.dp,
                 pointsYOffset = (-5).dp, gamesXOffset = (-4).dp,
-                hintEndPadding = 12.dp
+                hintEndPadding = 16.dp
             )
             else -> ScreenMetrics( // large square
                 isSmall = false, isRound = false,
@@ -337,11 +337,11 @@ internal fun CounterScreen(
 private fun SwipeToSettingsHint(
     modifier: Modifier = Modifier,
 ) {
-    // Pequeño indicador: puntitos + chevron. Sin padding externo para no "achicar" la UI.
+    // Pequeño indicador: puntitos + chevron. Fondo blanco para visibilidad sobre pantallas oscuras.
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.Black.copy(alpha = 0.18f))
+            .background(Color.White.copy(alpha = 0.85f))
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -356,7 +356,7 @@ private fun SwipeToSettingsHint(
                     modifier = Modifier
                         .size(3.5.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.55f))
+                        .background(Color.Black.copy(alpha = 0.75f))
                 )
             }
         }
@@ -364,11 +364,10 @@ private fun SwipeToSettingsHint(
         // Chevron hacia la izquierda (swipe hacia la izquierda para abrir)
         Text(
             text = "‹",
-            color = Color.White.copy(alpha = 0.60f),
+            color = Color.Black.copy(alpha = 0.80f),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
         )
-        // (El engranaje fue removido para hacerlo más finito)
     }
 }
 

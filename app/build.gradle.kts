@@ -6,14 +6,44 @@ plugins {
 
 android {
     namespace = "com.gonzalocamera.padelcounter"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.gonzalocamera.padelcounter"
         minSdk = 30
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            // Configure in ~/.gradle/gradle.properties:
+            //   PADEL_STORE_FILE=/path/to/release.jks
+            //   PADEL_STORE_PASSWORD=...
+            //   PADEL_KEY_ALIAS=padel-score
+            //   PADEL_KEY_PASSWORD=...
+            val props = project.rootProject.properties
+            storeFile = (props["PADEL_STORE_FILE"] as? String)?.let { file(it) }
+            storePassword = props["PADEL_STORE_PASSWORD"] as? String
+            keyAlias = props["PADEL_KEY_ALIAS"] as? String
+            keyPassword = props["PADEL_KEY_PASSWORD"] as? String
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            val releaseConfig = signingConfigs.findByName("release")
+            if (releaseConfig?.storeFile != null) {
+                signingConfig = releaseConfig
+            }
+        }
     }
 
     buildFeatures {
@@ -31,6 +61,11 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    bundle {
+        density { enableSplit = true }
+        abi { enableSplit = true }
     }
 }
 

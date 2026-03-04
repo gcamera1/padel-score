@@ -9,7 +9,11 @@
       "Bash(./gradlew recordPaparazziDebug:*)",
       "Bash(jar tf:*)",
       "Bash(javap:*)",
-      "Bash(./gradlew testDebugUnitTest:*)"
+      "Bash(./gradlew testDebugUnitTest:*)",
+      "Bash(ls:*)",
+      "Bash(file:*)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(./gradlew assembleRelease:*)"
     ]
   }
 }

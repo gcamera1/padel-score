@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Padel Score — a Wear OS (Android) app for tracking padel tennis scores. Kotlin + Jetpack Compose, targeting 40mm+ watches (API 30-34).
+Padel Score — a Wear OS (Android) app for tracking padel tennis scores. Kotlin + Jetpack Compose, targeting 40mm+ watches (API 30-35).
 
 ## Build & Test Commands
 
@@ -13,6 +13,14 @@ Padel Score — a Wear OS (Android) app for tracking padel tennis scores. Kotlin
 ./gradlew test                               # Run all unit tests
 ./gradlew test --tests "*PadelLogicTest"     # Run scoring logic tests only
 ./gradlew installDebug                       # Install on connected watch/emulator
+
+# Screenshots (Paparazzi — no emulator needed)
+./gradlew recordPaparazziDebug --tests "*CounterScreenshot*"
+# Output: app/src/test/snapshots/images/
+
+# Release build (requires keystore configured in ~/.gradle/gradle.properties)
+./gradlew bundleRelease                      # Build AAB for Play Store
+# Output: app/build/outputs/bundle/release/app-release.aab
 ```
 
 ## Architecture
@@ -41,7 +49,7 @@ Three-layer architecture, no ViewModel, no DI — direct instantiation suits thi
 - **Commit format:** Conventional Commits — `feat(wear): ...`, `fix: ...`, `refactor: ...`
 - **UI text:** Spanish for user-facing strings, English for code identifiers
 - **Pure functions preferred** in logic layer — no unnecessary dependencies or side effects
-- **Responsive layout:** 40mm watches get priority (0.88f width, 38sp score font); larger watches use 0.60f width, 54sp
+- **Responsive layout:** `ScreenMetrics` adapts court size for round vs square screens. Round screens use smaller fractions to fit within the inscribed circle (`fw² + fh² ≤ 1.0`)
 - **Haptic feedback:** `TextHandleMove` for taps, `LongPress` for double-taps
 
 ## Enums

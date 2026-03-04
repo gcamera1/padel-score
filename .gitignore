@@ -12,6 +12,9 @@
 # Paparazzi screenshot snapshots (local only)
 app/src/test/snapshots/
 /captures
+# Release signing keystores
+*.jks
+*.keystore
 .externalNativeBuild
 .cxx
 local.properties

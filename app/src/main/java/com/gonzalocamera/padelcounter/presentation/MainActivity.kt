@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { COUNTER, SETTINGS, NEW_MATCH }
+private enum class Screen { COUNTER, SETTINGS, NEW_MATCH, TUTORIAL }
 
 @Composable
 private fun PadelApp() {
@@ -157,6 +157,7 @@ private fun PadelApp() {
                 onToggleKeepOn = { scope.launch { repo.setKeepScreenOn(it) } },
                 onCourtColorChange = { scope.launch { repo.setCourtColor(it) } },
                 onNewMatch = { screen = Screen.NEW_MATCH },
+                onTutorial = { screen = Screen.TUTORIAL },
                 onBack = { screen = Screen.COUNTER }
             )
         }
@@ -182,6 +183,15 @@ private fun PadelApp() {
                 },
                 onCancel = { screen = Screen.SETTINGS }
             )
+        }
+
+        AnimatedVisibility(
+            visible = screen == Screen.TUTORIAL,
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            TutorialScreen(onBack = { screen = Screen.SETTINGS })
         }
     }
 }
@@ -579,6 +589,7 @@ private fun SettingsScreen(
     onToggleKeepOn: (Boolean) -> Unit,
     onCourtColorChange: (CourtColorOption) -> Unit,
     onNewMatch: () -> Unit,
+    onTutorial: () -> Unit,
     onBack: () -> Unit
 ) {
     val listState = rememberScalingLazyListState()
@@ -729,6 +740,58 @@ private fun SettingsScreen(
                     toggleControl = { Switch(checked = state.keepScreenOn) }
                 )
             }
+
+            item {
+                OutlinedButton(onClick = onTutorial, modifier = Modifier.fillMaxWidth()) { Text("Tutorial") }
+            }
+            item {
+                OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TutorialScreen(onBack: () -> Unit) {
+    val listState = rememberScalingLazyListState()
+    val haptic = LocalHapticFeedback.current
+    var swipeDragAccum by remember { mutableStateOf(0f) }
+    val swipeThresholdPx = 110f
+
+    Scaffold(
+        timeText = { TimeText() },
+        vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
+        positionIndicator = { PositionIndicator(scalingLazyListState = listState) }
+    ) {
+        ScalingLazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { swipeDragAccum = 0f },
+                        onHorizontalDrag = { _, dragAmount -> swipeDragAccum += dragAmount },
+                        onDragEnd = {
+                            if (swipeDragAccum >= swipeThresholdPx) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onBack()
+                            }
+                            swipeDragAccum = 0f
+                        }
+                    )
+                },
+            state = listState,
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            item { Text("Tutorial", fontWeight = FontWeight.Bold) }
+
+            item { Text("1. Al iniciar un partido, tocá arriba o abajo para elegir quién saca.", fontSize = 12.sp) }
+            item { Text("2. Un toque suma un punto al lado tocado (arriba = rival, abajo = vos).", fontSize = 12.sp) }
+            item { Text("3. Doble toque resta un punto de ese lado.", fontSize = 12.sp) }
+            item { Text("4. Si ambos están en 0 puntos, el doble toque resta un game del lado del toque.", fontSize = 12.sp) }
+            item { Text("5. La pelotita indica quién saca y de qué lado.", fontSize = 12.sp) }
+            item { Text("6. Deslizá hacia la izquierda para abrir Ajustes.", fontSize = 12.sp) }
+            item { Text("7. Deslizá hacia la derecha para volver a la cancha.", fontSize = 12.sp) }
 
             item {
                 OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Volver") }

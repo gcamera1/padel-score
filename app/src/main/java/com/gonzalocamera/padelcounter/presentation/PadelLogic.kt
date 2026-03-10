@@ -15,6 +15,18 @@ private fun tbTarget(decider: Decider): Int = when (decider) {
     Decider.SUPER10 -> 10
 }
 
+/**
+ * Compute who serves and from which side in a tie-break.
+ * Pattern: first server gets 1 serve, then alternating 2 serves each.
+ * Side: even total → right (deuce), odd total → left (ad).
+ */
+internal fun computeTbServe(totalTbPoints: Int, startedByMe: Boolean): Pair<Boolean, Boolean> {
+    val serverIsStarter = ((totalTbPoints + 1) / 2) % 2 == 0
+    val myServe = if (serverIsStarter) startedByMe else !startedByMe
+    val serveFromRight = totalTbPoints % 2 == 0
+    return Pair(myServe, serveFromRight)
+}
+
 fun pointsLabel(state: PadelState, isMe: Boolean): String {
     return if (state.inTieBreak) {
         val p = if (isMe) state.myTbPoints else state.oppTbPoints
@@ -40,16 +52,22 @@ fun addPointToOpp(state: PadelState): PadelState =
 fun subtractPointFromMy(state: PadelState): PadelState {
     return if (state.inTieBreak) {
         if (state.myTbPoints == 0 && state.oppTbPoints == 0) {
-            // Descontar game (salir del tie-break) si ambos TB points en 0
             subtractGame(state, me = true)
         } else {
-            state.copy(myTbPoints = (state.myTbPoints - 1).coerceAtLeast(0))
+            val newMyTb = (state.myTbPoints - 1).coerceAtLeast(0)
+            val (myServe, fromRight) = computeTbServe(
+                newMyTb + state.oppTbPoints, state.tieBreakStartedByMe
+            )
+            state.copy(myTbPoints = newMyTb, myServe = myServe, serveFromRight = fromRight)
         }
     } else {
         if (state.myPointsIdx == 0 && state.oppPointsIdx == 0) {
             subtractGame(state, me = true)
         } else {
-            state.copy(myPointsIdx = decIdx(state.myPointsIdx))
+            state.copy(
+                myPointsIdx = decIdx(state.myPointsIdx),
+                serveFromRight = !state.serveFromRight
+            )
         }
     }
 }
@@ -59,13 +77,20 @@ fun subtractPointFromOpp(state: PadelState): PadelState {
         if (state.myTbPoints == 0 && state.oppTbPoints == 0) {
             subtractGame(state, me = false)
         } else {
-            state.copy(oppTbPoints = (state.oppTbPoints - 1).coerceAtLeast(0))
+            val newOppTb = (state.oppTbPoints - 1).coerceAtLeast(0)
+            val (myServe, fromRight) = computeTbServe(
+                state.myTbPoints + newOppTb, state.tieBreakStartedByMe
+            )
+            state.copy(oppTbPoints = newOppTb, myServe = myServe, serveFromRight = fromRight)
         }
     } else {
         if (state.myPointsIdx == 0 && state.oppPointsIdx == 0) {
             subtractGame(state, me = false)
         } else {
-            state.copy(oppPointsIdx = decIdx(state.oppPointsIdx))
+            state.copy(
+                oppPointsIdx = decIdx(state.oppPointsIdx),
+                serveFromRight = !state.serveFromRight
+            )
         }
     }
 }
@@ -79,7 +104,8 @@ private fun subtractGame(state: PadelState, me: Boolean): PadelState {
     } else {
         state
     }
-    return if (me) newState.copy(myGames = games - 1) else newState.copy(oppGames = games - 1)
+    val s = if (me) newState.copy(myGames = games - 1) else newState.copy(oppGames = games - 1)
+    return s.copy(myServe = !state.myServe, serveFromRight = true)
 }
 
 private fun decIdx(idx: Int): Int = when {
@@ -91,38 +117,34 @@ private fun decIdx(idx: Int): Int = when {
 private fun addNormalPoint(state: PadelState, me: Boolean): PadelState {
     val myIdx = if (me) state.myPointsIdx else state.oppPointsIdx
     val oppIdx = if (me) state.oppPointsIdx else state.myPointsIdx
+    val flipServe = !state.serveFromRight
 
     // Golden point (sin AD)
     if (state.goldenPoint) {
-        // Si estoy en 40 y el otro < 40 -> gano game
         if (myIdx >= 3 && oppIdx < 3) return winGame(state, me)
-        // Si es 40-40 -> próximo punto gana game
         if (myIdx >= 3 && oppIdx >= 3) return winGame(state, me)
-        // Caso normal
         val nextMy = (myIdx + 1).coerceAtMost(3)
-        return if (me) state.copy(myPointsIdx = nextMy) else state.copy(oppPointsIdx = nextMy)
+        val s = if (me) state.copy(myPointsIdx = nextMy) else state.copy(oppPointsIdx = nextMy)
+        return s.copy(serveFromRight = flipServe)
     }
 
     // Con AD
     return when {
-        // Gano game desde 40 si el otro < 40
         myIdx == 3 && oppIdx < 3 -> winGame(state, me)
 
-        // Deuce -> AD mío
         myIdx == 3 && oppIdx == 3 -> {
-            if (me) state.copy(myPointsIdx = 4) else state.copy(oppPointsIdx = 4)
+            val s = if (me) state.copy(myPointsIdx = 4) else state.copy(oppPointsIdx = 4)
+            s.copy(serveFromRight = flipServe)
         }
 
-        // Ya estaba en AD y marco -> gano game
         myIdx == 4 -> winGame(state, me)
 
-        // El otro estaba en AD y yo marco -> vuelvo a Deuce (40-40)
-        oppIdx == 4 -> state.copy(myPointsIdx = 3, oppPointsIdx = 3)
+        oppIdx == 4 -> state.copy(myPointsIdx = 3, oppPointsIdx = 3, serveFromRight = flipServe)
 
-        // Caso normal: escalo
         else -> {
             val nextMy = (myIdx + 1).coerceAtMost(3)
-            if (me) state.copy(myPointsIdx = nextMy) else state.copy(oppPointsIdx = nextMy)
+            val s = if (me) state.copy(myPointsIdx = nextMy) else state.copy(oppPointsIdx = nextMy)
+            s.copy(serveFromRight = flipServe)
         }
     }
 }
@@ -136,24 +158,34 @@ private fun addTbPoint(state: PadelState, me: Boolean): PadelState {
     val updated = if (me) state.copy(myTbPoints = my) else state.copy(oppTbPoints = opp)
 
     val iWin = if (me) (my >= target && my - opp >= 2) else (opp >= target && opp - my >= 2)
-    return if (iWin) winTieBreakAndSet(updated, me) else updated
+    if (iWin) return winTieBreakAndSet(updated, me)
+
+    val (myServe, fromRight) = computeTbServe(my + opp, state.tieBreakStartedByMe)
+    return updated.copy(myServe = myServe, serveFromRight = fromRight)
 }
 
 private fun winGame(state: PadelState, me: Boolean): PadelState {
     val newMyGames = if (me) state.myGames + 1 else state.myGames
     val newOppGames = if (!me) state.oppGames + 1 else state.oppGames
 
-    // Reset puntos del game
+    // Reset puntos del game + toggle server + reset serve side
     var s = state.copy(
         myGames = newMyGames,
         oppGames = newOppGames,
         myPointsIdx = 0,
-        oppPointsIdx = 0
+        oppPointsIdx = 0,
+        myServe = !state.myServe,
+        serveFromRight = true
     )
 
     // Entrar a tie-break SOLO en 6-6
     if (!s.inTieBreak && s.myGames == 6 && s.oppGames == 6) {
-        s = s.copy(inTieBreak = true, myTbPoints = 0, oppTbPoints = 0)
+        s = s.copy(
+            inTieBreak = true,
+            myTbPoints = 0,
+            oppTbPoints = 0,
+            tieBreakStartedByMe = s.myServe
+        )
         return s
     }
 
@@ -162,6 +194,7 @@ private fun winGame(state: PadelState, me: Boolean): PadelState {
 
 private fun winTieBreakAndSet(state: PadelState, me: Boolean): PadelState {
     // Venimos de 6-6. El que gana queda 7-6.
+    // Next set: the player who didn't start the TB serves first.
     val s = if (me) {
         state.copy(myGames = 7, oppGames = 6)
     } else {
@@ -171,7 +204,9 @@ private fun winTieBreakAndSet(state: PadelState, me: Boolean): PadelState {
         myTbPoints = 0,
         oppTbPoints = 0,
         myPointsIdx = 0,
-        oppPointsIdx = 0
+        oppPointsIdx = 0,
+        myServe = !state.tieBreakStartedByMe,
+        serveFromRight = true
     )
 
     return winSet(s, me)

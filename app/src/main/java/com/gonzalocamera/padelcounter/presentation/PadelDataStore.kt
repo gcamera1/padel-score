@@ -34,7 +34,13 @@ data class PadelState(
     val keepScreenOn: Boolean = true,
     val goldenPoint: Boolean = true, // sin AD
     val decider: Decider = Decider.TB7, // TB cuando 6-6
-    val courtColor: CourtColorOption = CourtColorOption.BLUE
+    val courtColor: CourtColorOption = CourtColorOption.BLUE,
+
+    // Serve tracking
+    val isServeSet: Boolean = false,
+    val myServe: Boolean = true,
+    val serveFromRight: Boolean = true,
+    val tieBreakStartedByMe: Boolean = true
 )
 
 class PadelRepository(private val context: Context) {
@@ -54,6 +60,11 @@ class PadelRepository(private val context: Context) {
         val GOLDEN = booleanPreferencesKey("golden_point")
         val DECIDER = stringPreferencesKey("decider")
         val COURT = stringPreferencesKey("court_color")
+
+        val IS_SERVE_SET = booleanPreferencesKey("is_serve_set")
+        val MY_SERVE = booleanPreferencesKey("my_serve")
+        val SERVE_FROM_RIGHT = booleanPreferencesKey("serve_from_right")
+        val TB_STARTED_BY_ME = booleanPreferencesKey("tb_started_by_me")
     }
 
     val stateFlow: Flow<PadelState> = context.dataStore.data.map { prefs ->
@@ -74,7 +85,11 @@ class PadelRepository(private val context: Context) {
             }.getOrDefault(Decider.TB7),
             courtColor = runCatching {
                 CourtColorOption.valueOf(prefs[Keys.COURT] ?: CourtColorOption.BLUE.name)
-            }.getOrDefault(CourtColorOption.BLUE)
+            }.getOrDefault(CourtColorOption.BLUE),
+            isServeSet = prefs[Keys.IS_SERVE_SET] ?: false,
+            myServe = prefs[Keys.MY_SERVE] ?: true,
+            serveFromRight = prefs[Keys.SERVE_FROM_RIGHT] ?: true,
+            tieBreakStartedByMe = prefs[Keys.TB_STARTED_BY_ME] ?: true
         )
     }
 
@@ -94,6 +109,11 @@ class PadelRepository(private val context: Context) {
             prefs[Keys.GOLDEN] = newState.goldenPoint
             prefs[Keys.DECIDER] = newState.decider.name
             prefs[Keys.COURT] = newState.courtColor.name
+
+            prefs[Keys.IS_SERVE_SET] = newState.isServeSet
+            prefs[Keys.MY_SERVE] = newState.myServe
+            prefs[Keys.SERVE_FROM_RIGHT] = newState.serveFromRight
+            prefs[Keys.TB_STARTED_BY_ME] = newState.tieBreakStartedByMe
         }
     }
 

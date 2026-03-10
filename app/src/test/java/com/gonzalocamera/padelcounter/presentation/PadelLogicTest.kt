@@ -429,4 +429,157 @@ class PadelLogicTest {
         assertThat(result.myGames).isEqualTo(6)
         assertThat(result.inTieBreak).isTrue()
     }
+
+    // ============= SERVE TRACKING =============
+
+    @Test
+    fun `serve side toggles each point`() {
+        var state = PadelState(myServe = true, serveFromRight = true)
+        state = addPointToMy(state) // 15-0
+        assertThat(state.serveFromRight).isFalse()
+        state = addPointToMy(state) // 30-0
+        assertThat(state.serveFromRight).isTrue()
+        state = addPointToMy(state) // 40-0
+        assertThat(state.serveFromRight).isFalse()
+    }
+
+    @Test
+    fun `server toggles on game win`() {
+        val state = PadelState(myServe = true, myPointsIdx = 3, oppPointsIdx = 0)
+        val result = addPointToMy(state)
+        assertThat(result.myGames).isEqualTo(1)
+        assertThat(result.myServe).isFalse() // opponent serves next game
+        assertThat(result.serveFromRight).isTrue() // reset for new game
+    }
+
+    @Test
+    fun `serve alternates correctly through multiple games`() {
+        var state = PadelState(myServe = true, isServeSet = true)
+
+        // Win game 1 (I serve)
+        repeat(4) { state = addPointToMy(state) }
+        assertThat(state.myGames).isEqualTo(1)
+        assertThat(state.myServe).isFalse()
+
+        // Win game 2 (opponent serves)
+        repeat(4) { state = addPointToMy(state) }
+        assertThat(state.myGames).isEqualTo(2)
+        assertThat(state.myServe).isTrue() // back to me
+    }
+
+    @Test
+    fun `serve side toggles in deuce game`() {
+        var state = PadelState(
+            myServe = true, serveFromRight = true,
+            myPointsIdx = 3, oppPointsIdx = 3,
+            goldenPoint = false
+        )
+        // At 40-40 (deuce), 6 points played, serveFromRight should be true
+        state = addPointToMy(state) // AD me - 7th point
+        assertThat(state.serveFromRight).isFalse()
+        state = addPointToOpp(state) // back to deuce - 8th point
+        assertThat(state.serveFromRight).isTrue()
+    }
+
+    @Test
+    fun `tiebreak serve pattern - first server gets 1 then alternating 2`() {
+        var state = PadelState(
+            inTieBreak = true, myGames = 6, oppGames = 6,
+            myServe = true, tieBreakStartedByMe = true,
+            decider = Decider.TB7
+        )
+
+        // Point 1: I serve (starter), from right
+        assertThat(state.myServe).isTrue()
+        assertThat(state.serveFromRight).isTrue()
+
+        state = addPointToMy(state) // total=1
+        // Points 2-3: opponent serves
+        assertThat(state.myServe).isFalse()
+        assertThat(state.serveFromRight).isFalse() // from left
+
+        state = addPointToMy(state) // total=2
+        assertThat(state.myServe).isFalse() // still opponent
+        assertThat(state.serveFromRight).isTrue()
+
+        state = addPointToMy(state) // total=3
+        // Points 4-5: I serve
+        assertThat(state.myServe).isTrue()
+        assertThat(state.serveFromRight).isFalse()
+
+        state = addPointToMy(state) // total=4
+        assertThat(state.myServe).isTrue()
+        assertThat(state.serveFromRight).isTrue()
+    }
+
+    @Test
+    fun `tiebreak entry saves who starts`() {
+        // I serve game 12 (myGames=5→6), entering 6-6
+        val state = PadelState(
+            myGames = 5, oppGames = 6,
+            myPointsIdx = 3, oppPointsIdx = 0,
+            myServe = true
+        )
+        val result = addPointToMy(state)
+        assertThat(result.inTieBreak).isTrue()
+        // After winning game: serve toggles to opponent
+        assertThat(result.myServe).isFalse()
+        assertThat(result.tieBreakStartedByMe).isFalse()
+    }
+
+    @Test
+    fun `after tiebreak win, opposite of TB starter serves next set`() {
+        val state = PadelState(
+            inTieBreak = true,
+            myTbPoints = 6, oppTbPoints = 4,
+            myGames = 6, oppGames = 6,
+            tieBreakStartedByMe = false, // opponent started TB
+            decider = Decider.TB7
+        )
+        val result = addPointToMy(state)
+        assertThat(result.inTieBreak).isFalse()
+        assertThat(result.mySets).isEqualTo(1)
+        // Opposite of TB starter → I serve next set
+        assertThat(result.myServe).isTrue()
+        assertThat(result.serveFromRight).isTrue()
+    }
+
+    @Test
+    fun `subtract game toggles server back`() {
+        val state = PadelState(
+            myGames = 3, oppGames = 2,
+            myPointsIdx = 0, oppPointsIdx = 0,
+            myServe = true
+        )
+        val result = subtractPointFromMy(state)
+        assertThat(result.myGames).isEqualTo(2)
+        assertThat(result.myServe).isFalse() // toggled back
+        assertThat(result.serveFromRight).isTrue()
+    }
+
+    @Test
+    fun `subtract point toggles serve side back`() {
+        val state = PadelState(myPointsIdx = 2, serveFromRight = false)
+        val result = subtractPointFromMy(state)
+        assertThat(result.myPointsIdx).isEqualTo(1)
+        assertThat(result.serveFromRight).isTrue()
+    }
+
+    @Test
+    fun `computeTbServe pattern is correct`() {
+        // Point 0: starter serves from right
+        assertThat(computeTbServe(0, startedByMe = true)).isEqualTo(Pair(true, true))
+        // Point 1: other serves from left
+        assertThat(computeTbServe(1, startedByMe = true)).isEqualTo(Pair(false, false))
+        // Point 2: other serves from right
+        assertThat(computeTbServe(2, startedByMe = true)).isEqualTo(Pair(false, true))
+        // Point 3: starter serves from left
+        assertThat(computeTbServe(3, startedByMe = true)).isEqualTo(Pair(true, false))
+        // Point 4: starter serves from right
+        assertThat(computeTbServe(4, startedByMe = true)).isEqualTo(Pair(true, true))
+        // Point 5: other serves from left
+        assertThat(computeTbServe(5, startedByMe = true)).isEqualTo(Pair(false, false))
+        // Point 6: other serves from right
+        assertThat(computeTbServe(6, startedByMe = true)).isEqualTo(Pair(false, true))
+    }
 }

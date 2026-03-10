@@ -1,6 +1,7 @@
 package com.gonzalocamera.padelcounter.presentation
 
 import android.app.Activity
+import androidx.compose.ui.text.style.TextAlign
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -21,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -30,7 +32,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.wear.compose.material.*
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.painterResource
+import com.gonzalocamera.padelcounter.R
 
 /**
  * Layout metrics calculated from screen size and shape (round vs square).
@@ -227,6 +232,8 @@ internal fun CounterScreen(
                 .fillMaxHeight(metrics.courtHeightFraction)
                 .clip(RoundedCornerShape(metrics.courtRadius))
 
+            val needsServeSelection = !state.isServeSet && isMatchStart(state)
+
             Box(modifier = courtModifier) {
                 // Fondo cancha
                 CourtBackgroundVertical(
@@ -235,34 +242,47 @@ internal fun CounterScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Sets a la izquierda, DENTRO de la cancha.
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = state.oppSets.toString(),
-                        color = oppRed,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = metrics.smallSize,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = "-",
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = metrics.smallSize,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = state.mySets.toString(),
-                        color = myGreen,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = metrics.smallSize,
-                        maxLines = 1
+                // Sets a la izquierda, DENTRO de la cancha (oculto durante selección de saque)
+                if (!needsServeSelection) {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = state.oppSets.toString(),
+                            color = oppRed,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = metrics.smallSize,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "-",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = metrics.smallSize,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = state.mySets.toString(),
+                            color = myGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = metrics.smallSize,
+                            maxLines = 1
+                        )
+                    }
+                }
+
+                // Pelota central durante selección de quién saca
+                if (needsServeSelection) {
+                    Image(
+                        painter = painterResource(id = R.drawable.padelball),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(with(LocalDensity.current) { metrics.bigScore.toDp() })
                     )
                 }
 
@@ -278,7 +298,12 @@ internal fun CounterScreen(
                         modifier = Modifier.weight(1f),
                         onTap = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSave(addPointToOpp(latestState))
+                            val s = latestState
+                            if (!s.isServeSet && isMatchStart(s)) {
+                                onSave(s.copy(isServeSet = true, myServe = false, serveFromRight = true))
+                            } else {
+                                onSave(addPointToOpp(s))
+                            }
                         },
                         onDoubleTap = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -286,15 +311,17 @@ internal fun CounterScreen(
                         },
                         highlightColor = oppRed.copy(alpha = 0.18f)
                     ) {
-                        ScoreLine(
-                            games = state.oppGames,
-                            pointsText = pointsLabel(state, isMe = false),
-                            pointsColor = oppRed,
-                            bigScore = metrics.bigScore,
-                            smallSize = metrics.smallSize,
-                            pointsYOffset = metrics.pointsYOffset,
-                            gamesXOffset = metrics.gamesXOffset
-                        )
+                        if (!needsServeSelection) {
+                            ScoreLine(
+                                games = state.oppGames,
+                                pointsText = pointsLabel(state, isMe = false),
+                                pointsColor = oppRed,
+                                bigScore = metrics.bigScore,
+                                smallSize = metrics.smallSize,
+                                pointsYOffset = metrics.pointsYOffset,
+                                gamesXOffset = metrics.gamesXOffset
+                            )
+                        }
                     }
 
                     // Vos (abajo)
@@ -302,7 +329,12 @@ internal fun CounterScreen(
                         modifier = Modifier.weight(1f),
                         onTap = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSave(addPointToMy(latestState))
+                            val s = latestState
+                            if (!s.isServeSet && isMatchStart(s)) {
+                                onSave(s.copy(isServeSet = true, myServe = true, serveFromRight = true))
+                            } else {
+                                onSave(addPointToMy(s))
+                            }
                         },
                         onDoubleTap = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -310,15 +342,41 @@ internal fun CounterScreen(
                         },
                         highlightColor = myGreen.copy(alpha = 0.18f)
                     ) {
-                        ScoreLine(
-                            games = state.myGames,
-                            pointsText = pointsLabel(state, isMe = true),
-                            pointsColor = myGreen,
-                            bigScore = metrics.bigScore,
-                            smallSize = metrics.smallSize,
-                            gamesXOffset = metrics.gamesXOffset
-                        )
+                        if (!needsServeSelection) {
+                            ScoreLine(
+                                games = state.myGames,
+                                pointsText = pointsLabel(state, isMe = true),
+                                pointsColor = myGreen,
+                                bigScore = metrics.bigScore,
+                                smallSize = metrics.smallSize,
+                                gamesXOffset = metrics.gamesXOffset
+                            )
+                        }
                     }
+                }
+
+                // Serve indicator (padel ball)
+                if (state.isServeSet) {
+                    val ballSize = if (metrics.isSmall) 7.dp else 9.dp
+                    val hPad = if (metrics.isSmall) 12.dp else 16.dp
+                    val vPad = if (metrics.isSmall) 6.dp else 8.dp
+
+                    // Opponent serves from right = viewer's top-left (mirrored perspective)
+                    val alignment: Alignment = when {
+                        !state.myServe && state.serveFromRight -> Alignment.TopStart
+                        !state.myServe && !state.serveFromRight -> Alignment.TopEnd
+                        state.myServe && state.serveFromRight -> Alignment.BottomEnd
+                        else -> Alignment.BottomStart
+                    }
+
+                    Image(
+                        painter = painterResource(id = R.drawable.padelball),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(alignment)
+                            .padding(horizontal = hPad, vertical = vPad)
+                            .size(ballSize)
+                    )
                 }
             }
             // Hint visual para indicar swipe a Ajustes (fuera del clip de la cancha)
@@ -502,6 +560,12 @@ private fun CourtBackgroundVertical(
     }
 }
 
+internal fun isMatchStart(state: PadelState): Boolean =
+    state.mySets == 0 && state.oppSets == 0 &&
+    state.myGames == 0 && state.oppGames == 0 &&
+    state.myPointsIdx == 0 && state.oppPointsIdx == 0 &&
+    !state.inTieBreak
+
 internal fun courtColorToColor(opt: CourtColorOption): Color = when (opt) {
     CourtColorOption.BLUE -> Color(0xFF1976D2)
     CourtColorOption.ORANGE -> Color(0xFFF55600)
@@ -532,7 +596,7 @@ private fun SettingsScreen(
         ) {
             item { Text("Ajustes", fontWeight = FontWeight.Bold) }
 
-            item { Text("Pantalla siempre encendida") }
+            item { Text("Pantalla siempre encendida", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
             item {
                 ToggleChip(
                     checked = state.keepScreenOn,

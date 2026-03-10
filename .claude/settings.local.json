@@ -19,7 +19,8 @@
       "Bash($HOME/Library/Android/sdk/platform-tools/adb shell:*)",
       "Bash(./gradlew compileDebugKotlin:*)",
       "Bash(pip3 install:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(./gradlew bundleRelease:*)"
     ]
   }
 }

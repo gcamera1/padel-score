@@ -79,7 +79,7 @@ class CounterScreenshot_GalaxyWatch40mm {
     @get:Rule val paparazzi = Paparazzi(deviceConfig = GALAXY_WATCH_40MM)
 
     @Test fun normalGame() {
-        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onOpenSettings = {}) } }
+        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onUndo = {}, onOpenSettings = {}) } }
     }
 }
 
@@ -87,7 +87,7 @@ class CounterScreenshot_GalaxyWatch44mm {
     @get:Rule val paparazzi = Paparazzi(deviceConfig = GALAXY_WATCH_44MM)
 
     @Test fun normalGame() {
-        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onOpenSettings = {}) } }
+        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onUndo = {}, onOpenSettings = {}) } }
     }
 }
 
@@ -95,7 +95,7 @@ class CounterScreenshot_GalaxyWatch6_40mm {
     @get:Rule val paparazzi = Paparazzi(deviceConfig = GALAXY_WATCH6_40MM)
 
     @Test fun normalGame() {
-        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onOpenSettings = {}) } }
+        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onUndo = {}, onOpenSettings = {}) } }
     }
 }
 
@@ -103,7 +103,7 @@ class CounterScreenshot_GalaxyWatch6_44mm {
     @get:Rule val paparazzi = Paparazzi(deviceConfig = GALAXY_WATCH6_44MM)
 
     @Test fun normalGame() {
-        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onOpenSettings = {}) } }
+        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onUndo = {}, onOpenSettings = {}) } }
     }
 }
 
@@ -111,11 +111,11 @@ class CounterScreenshot_PixelWatch {
     @get:Rule val paparazzi = Paparazzi(deviceConfig = PIXEL_WATCH)
 
     @Test fun normalGame() {
-        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onOpenSettings = {}) } }
+        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onUndo = {}, onOpenSettings = {}) } }
     }
 
     @Test fun tieBreak() {
-        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = TIEBREAK_STATE, onSave = {}, onOpenSettings = {}) } }
+        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = TIEBREAK_STATE, onSave = {}, onUndo = {}, onOpenSettings = {}) } }
     }
 }
 
@@ -123,6 +123,6 @@ class CounterScreenshot_PixelWatch3_45mm {
     @get:Rule val paparazzi = Paparazzi(deviceConfig = PIXEL_WATCH_3_45MM)
 
     @Test fun normalGame() {
-        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onOpenSettings = {}) } }
+        paparazzi.snapshot { androidx.wear.compose.material.MaterialTheme { CounterScreen(state = DEFAULT_STATE, onSave = {}, onUndo = {}, onOpenSettings = {}) } }
     }
 }

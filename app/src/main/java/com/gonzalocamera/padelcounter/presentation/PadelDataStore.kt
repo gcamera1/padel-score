@@ -32,7 +32,7 @@ data class PadelState(
     val inTieBreak: Boolean = false,
 
     val keepScreenOn: Boolean = true,
-    val goldenPoint: Boolean = true, // sin AD
+    val goldenPoint: Boolean = false, // con AD (ventaja)
     val decider: Decider = Decider.TB7, // TB cuando 6-6
     val courtColor: CourtColorOption = CourtColorOption.BLUE,
 
@@ -81,7 +81,7 @@ class PadelRepository(private val context: Context) {
             oppTbPoints = prefs[Keys.OPP_TB] ?: 0,
             inTieBreak = prefs[Keys.IN_TB] ?: false,
             keepScreenOn = prefs[Keys.KEEP_ON] ?: true,
-            goldenPoint = prefs[Keys.GOLDEN] ?: true,
+            goldenPoint = prefs[Keys.GOLDEN] ?: false,
             decider = runCatching {
                 Decider.valueOf(prefs[Keys.DECIDER] ?: Decider.TB7.name)
             }.getOrDefault(Decider.TB7),

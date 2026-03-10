@@ -132,6 +132,7 @@ private fun PadelApp() {
     }
 
     var screen by remember { mutableStateOf(Screen.COUNTER) }
+    var previousState by remember { mutableStateOf<PadelState?>(null) }
 
     // Walkthrough en primer inicio
     if (!hasSeenWalkthrough) {
@@ -150,7 +151,17 @@ private fun PadelApp() {
         ) {
             CounterScreen(
                 state = state,
-                onSave = { scope.launch { repo.save(it) } },
+                onSave = { newState ->
+                    previousState = state
+                    scope.launch { repo.save(newState) }
+                },
+                onUndo = {
+                    previousState?.let { prev ->
+                        val current = state
+                        previousState = current
+                        scope.launch { repo.save(prev) }
+                    }
+                },
                 onOpenSettings = { screen = Screen.SETTINGS }
             )
         }
@@ -222,6 +233,7 @@ private fun PadelApp() {
 internal fun CounterScreen(
     state: PadelState,
     onSave: (PadelState) -> Unit,
+    onUndo: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
@@ -340,6 +352,10 @@ internal fun CounterScreen(
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onSave(subtractPointFromOpp(latestState))
                         },
+                        onLongPress = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onUndo()
+                        },
                         highlightColor = oppRed.copy(alpha = 0.18f)
                     ) {
                         if (!needsServeSelection) {
@@ -370,6 +386,10 @@ internal fun CounterScreen(
                         onDoubleTap = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onSave(subtractPointFromMy(latestState))
+                        },
+                        onLongPress = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onUndo()
                         },
                         highlightColor = myGreen.copy(alpha = 0.18f)
                     ) {
@@ -505,6 +525,7 @@ private fun TapZone(
     modifier: Modifier = Modifier,
     onTap: () -> Unit,
     onDoubleTap: () -> Unit,
+    onLongPress: () -> Unit = {},
     highlightColor: Color,
     cornerRadius: Dp = 12.dp,
     content: @Composable () -> Unit
@@ -520,14 +541,14 @@ private fun TapZone(
                     onPress = {
                         pressed = true
                         try {
-                            // Mantiene el brillo mientras el dedo está apoyado
                             tryAwaitRelease()
                         } finally {
                             pressed = false
                         }
                     },
                     onTap = { onTap() },
-                    onDoubleTap = { onDoubleTap() }
+                    onDoubleTap = { onDoubleTap() },
+                    onLongPress = { onLongPress() }
                 )
             },
         contentAlignment = Alignment.Center
@@ -768,6 +789,15 @@ private fun SettingsScreen(
             item {
                 OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
             }
+            item {
+                Text(
+                    text = "v1.0.0",
+                    fontSize = 10.sp,
+                    color = Color.White.copy(alpha = 0.35f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
@@ -776,7 +806,6 @@ private fun SettingsScreen(
 private fun WalkthroughScreen(onFinish: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     var step by remember { mutableStateOf(0) }
-    val totalSteps = 5
 
     data class WalkthroughStep(
         val title: String,
@@ -799,6 +828,10 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
             description = "Un toque = sumar punto\nDoble toque = restar punto"
         ),
         WalkthroughStep(
+            title = "Deshacer",
+            description = "Mantené presionado para\nvolver al estado anterior"
+        ),
+        WalkthroughStep(
             title = "Navegación",
             description = "Deslizá a la izquierda\npara abrir Ajustes"
         ),
@@ -807,6 +840,7 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
             description = "Ya podés empezar\na anotar tu partido"
         )
     )
+    val totalSteps = steps.size
 
     val current = steps[step]
 
@@ -940,13 +974,13 @@ private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
         ) {
             item { Text("Tutorial", fontWeight = FontWeight.Bold) }
 
-            item { Text("1. Al iniciar un partido, tocá arriba o abajo para elegir quién saca.", fontSize = 12.sp) }
+            item { Text("1. Al iniciar, tocá arriba o abajo para elegir quién saca.", fontSize = 12.sp) }
             item { Text("2. Un toque suma un punto al lado tocado (arriba = rival, abajo = vos).", fontSize = 12.sp) }
             item { Text("3. Doble toque resta un punto de ese lado.", fontSize = 12.sp) }
-            item { Text("4. Si ambos están en 0 puntos, el doble toque resta un game del lado del toque.", fontSize = 12.sp) }
-            item { Text("5. La pelotita indica quién saca y de qué lado.", fontSize = 12.sp) }
-            item { Text("6. Deslizá hacia la izquierda para abrir Ajustes.", fontSize = 12.sp) }
-            item { Text("7. Deslizá hacia la derecha para volver a la cancha.", fontSize = 12.sp) }
+            item { Text("4. Si ambos están en 0 puntos, el doble toque resta un game del lado que se toque.", fontSize = 12.sp) }
+            item { Text("5. Mantené presionado para deshacer la última acción.", fontSize = 12.sp) }
+            item { Text("6. La pelotita indica quién saca y de qué lado.", fontSize = 12.sp) }
+            item { Text("7. Deslizá a la izquierda para Ajustes, a la derecha para volver.", fontSize = 12.sp) }
 
             item {
                 Button(onClick = onWalkthrough, modifier = Modifier.fillMaxWidth()) { Text("Recorrido guiado") }

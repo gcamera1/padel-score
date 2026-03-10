@@ -65,6 +65,8 @@ class PadelRepository(private val context: Context) {
         val MY_SERVE = booleanPreferencesKey("my_serve")
         val SERVE_FROM_RIGHT = booleanPreferencesKey("serve_from_right")
         val TB_STARTED_BY_ME = booleanPreferencesKey("tb_started_by_me")
+
+        val HAS_SEEN_WALKTHROUGH = booleanPreferencesKey("has_seen_walkthrough")
     }
 
     val stateFlow: Flow<PadelState> = context.dataStore.data.map { prefs ->
@@ -115,6 +117,14 @@ class PadelRepository(private val context: Context) {
             prefs[Keys.SERVE_FROM_RIGHT] = newState.serveFromRight
             prefs[Keys.TB_STARTED_BY_ME] = newState.tieBreakStartedByMe
         }
+    }
+
+    val hasSeenWalkthrough: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.HAS_SEEN_WALKTHROUGH] ?: false
+    }
+
+    suspend fun setHasSeenWalkthrough() {
+        context.dataStore.edit { prefs -> prefs[Keys.HAS_SEEN_WALKTHROUGH] = true }
     }
 
     suspend fun setKeepScreenOn(on: Boolean) = save(current().copy(keepScreenOn = on))

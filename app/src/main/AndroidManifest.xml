@@ -7,7 +7,7 @@
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="Padel Score"
+        android:label="Simple Padel Score"
         android:supportsRtl="true">
 
         <!-- App standalone (no requiere teléfono) -->

@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { COUNTER, SETTINGS, NEW_MATCH, TUTORIAL }
+private enum class Screen { COUNTER, SETTINGS, NEW_MATCH, TUTORIAL, WALKTHROUGH }
 
 @Composable
 private fun PadelApp() {
@@ -123,6 +123,7 @@ private fun PadelApp() {
     val repo = remember { PadelRepository(context) }
     val scope = rememberCoroutineScope()
     val state by repo.stateFlow.collectAsState(initial = PadelState())
+    val hasSeenWalkthrough by repo.hasSeenWalkthrough.collectAsState(initial = true)
 
     LaunchedEffect(state.keepScreenOn) {
         val act = context as? Activity ?: return@LaunchedEffect
@@ -131,6 +132,14 @@ private fun PadelApp() {
     }
 
     var screen by remember { mutableStateOf(Screen.COUNTER) }
+
+    // Walkthrough en primer inicio
+    if (!hasSeenWalkthrough) {
+        WalkthroughScreen(onFinish = {
+            scope.launch { repo.setHasSeenWalkthrough() }
+        })
+        return
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
@@ -191,7 +200,19 @@ private fun PadelApp() {
             exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
             modifier = Modifier.fillMaxSize()
         ) {
-            TutorialScreen(onBack = { screen = Screen.SETTINGS })
+            TutorialScreen(
+                onBack = { screen = Screen.SETTINGS },
+                onWalkthrough = { screen = Screen.WALKTHROUGH }
+            )
+        }
+
+        AnimatedVisibility(
+            visible = screen == Screen.WALKTHROUGH,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            WalkthroughScreen(onFinish = { screen = Screen.TUTORIAL })
         }
     }
 }
@@ -752,7 +773,141 @@ private fun SettingsScreen(
 }
 
 @Composable
-private fun TutorialScreen(onBack: () -> Unit) {
+private fun WalkthroughScreen(onFinish: () -> Unit) {
+    val haptic = LocalHapticFeedback.current
+    var step by remember { mutableStateOf(0) }
+    val totalSteps = 5
+
+    data class WalkthroughStep(
+        val title: String,
+        val description: String,
+        val showBall: Boolean = false
+    )
+
+    val steps = listOf(
+        WalkthroughStep(
+            title = "Simple Padel Score",
+            description = "Tu marcador de pádel\nen la muñeca",
+            showBall = true
+        ),
+        WalkthroughStep(
+            title = "Elegí quién saca",
+            description = "Tocá arriba si saca el rival\nTocá abajo si sacás vos"
+        ),
+        WalkthroughStep(
+            title = "Anotá puntos",
+            description = "Un toque = sumar punto\nDoble toque = restar punto"
+        ),
+        WalkthroughStep(
+            title = "Navegación",
+            description = "Deslizá a la izquierda\npara abrir Ajustes"
+        ),
+        WalkthroughStep(
+            title = "¡Listo!",
+            description = "Ya podés empezar\na anotar tu partido"
+        )
+    )
+
+    val current = steps[step]
+
+    Scaffold(
+        timeText = { TimeText() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(step) {
+                    detectTapGestures(
+                        onTap = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            if (step < totalSteps - 1) step++ else onFinish()
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            AnimatedContent(
+                targetState = step,
+                transitionSpec = {
+                    (slideInHorizontally(initialOffsetX = { it }) + fadeIn()) togetherWith
+                        (slideOutHorizontally(targetOffsetX = { -it }) + fadeOut())
+                }
+            ) { currentStep ->
+                val s = steps[currentStep]
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Spacer(Modifier.weight(1f))
+
+                    // Título
+                    Text(
+                        text = s.title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Pelota en el paso de bienvenida
+                    if (s.showBall) {
+                        Image(
+                            painter = painterResource(id = R.drawable.padelball),
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    // Descripción
+                    Text(
+                        text = s.description,
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.weight(1f))
+
+                    // Indicador de progreso (dots)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(totalSteps) { i ->
+                            Box(
+                                modifier = Modifier
+                                    .size(if (i == currentStep) 6.dp else 4.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(
+                                        if (i == currentStep) Color.White
+                                        else Color.White.copy(alpha = 0.35f)
+                                    )
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    // Texto de acción
+                    Text(
+                        text = if (currentStep < totalSteps - 1) "Tocá para continuar" else "Tocá para empezar",
+                        fontSize = 10.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
     val listState = rememberScalingLazyListState()
     val haptic = LocalHapticFeedback.current
     var swipeDragAccum by remember { mutableStateOf(0f) }
@@ -793,6 +948,9 @@ private fun TutorialScreen(onBack: () -> Unit) {
             item { Text("6. Deslizá hacia la izquierda para abrir Ajustes.", fontSize = 12.sp) }
             item { Text("7. Deslizá hacia la derecha para volver a la cancha.", fontSize = 12.sp) }
 
+            item {
+                Button(onClick = onWalkthrough, modifier = Modifier.fillMaxWidth()) { Text("Recorrido guiado") }
+            }
             item {
                 OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
             }

@@ -582,6 +582,9 @@ private fun SettingsScreen(
     onBack: () -> Unit
 ) {
     val listState = rememberScalingLazyListState()
+    val haptic = LocalHapticFeedback.current
+    var swipeDragAccum by remember { mutableStateOf(0f) }
+    val swipeThresholdPx = 110f
 
     Scaffold(
         timeText = { TimeText() },
@@ -589,23 +592,30 @@ private fun SettingsScreen(
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) }
     ) {
         ScalingLazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { swipeDragAccum = 0f },
+                        onHorizontalDrag = { _, dragAmount -> swipeDragAccum += dragAmount },
+                        onDragEnd = {
+                            if (swipeDragAccum >= swipeThresholdPx) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onBack()
+                            }
+                            swipeDragAccum = 0f
+                        }
+                    )
+                },
             state = listState,
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item { Text("Ajustes", fontWeight = FontWeight.Bold) }
 
-            item { Text("Pantalla siempre encendida", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
             item {
-                ToggleChip(
-                    checked = state.keepScreenOn,
-                    onCheckedChange = onToggleKeepOn,
-                    label = { Text(if (state.keepScreenOn) "Activado" else "Desactivado") },
-                    toggleControl = { Switch(checked = state.keepScreenOn) }
-                )
+                Button(onClick = onNewMatch, modifier = Modifier.fillMaxWidth()) { Text("Nuevo partido…") }
             }
-
 
             item { Text("Color de cancha") }
 
@@ -709,9 +719,17 @@ private fun SettingsScreen(
                     }
                 }
             }
+
+            item { Text("Pantalla siempre encendida", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
             item {
-                Button(onClick = onNewMatch, modifier = Modifier.fillMaxWidth()) { Text("Nuevo partido…") }
+                ToggleChip(
+                    checked = state.keepScreenOn,
+                    onCheckedChange = onToggleKeepOn,
+                    label = { Text(if (state.keepScreenOn) "Activado" else "Desactivado") },
+                    toggleControl = { Switch(checked = state.keepScreenOn) }
+                )
             }
+
             item {
                 OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
             }

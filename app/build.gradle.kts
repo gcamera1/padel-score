@@ -12,7 +12,7 @@ android {
         applicationId = "com.gonzalocamera.padelcounter"
         minSdk = 30
         targetSdk = 34
-        versionCode = 1
+        versionCode = 4
         versionName = "1.0.0"
     }
 

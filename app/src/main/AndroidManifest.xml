@@ -4,6 +4,10 @@
     <!-- Indica que es una app para reloj -->
     <uses-feature android:name="android.hardware.type.watch" />
 
+    <!-- Evitar que Android filtre relojes por features implícitas -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -19,8 +23,7 @@
             android:name="com.gonzalocamera.padelcounter.presentation.MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.SplashScreen"
-            android:screenOrientation="portrait">
+            android:theme="@style/Theme.SplashScreen">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

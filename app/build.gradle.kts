@@ -12,7 +12,7 @@ android {
         applicationId = "com.gonzalocamera.padelcounter"
         minSdk = 30
         targetSdk = 34
-        versionCode = 4
+        versionCode = 5
         versionName = "1.0.0"
     }
 
@@ -78,7 +78,6 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
     implementation("androidx.core:core-splashscreen:1.0.1")
 
     // Wear OS Compose

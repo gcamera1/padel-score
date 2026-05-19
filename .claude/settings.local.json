@@ -20,7 +20,18 @@
       "Bash(./gradlew compileDebugKotlin:*)",
       "Bash(pip3 install:*)",
       "Bash(python3:*)",
-      "Bash(./gradlew bundleRelease:*)"
+      "Bash(./gradlew bundleRelease:*)",
+      "Bash(keytool -genkeypair -v -keystore ~/padel-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias padel-score -storepass Gcamera060488 -keypass Gcamera060488 -dname \"CN=Gonzalo Camera, OU=Personal, O=Personal, L=Buenos Aires, ST=Buenos Aires, C=AR\")",
+      "Bash(mkdir -p ~/.gradle && cat > ~/.gradle/gradle.properties << 'EOF'\nPADEL_STORE_FILE=/Users/gonzalocamera/padel-release.jks\nPADEL_STORE_PASSWORD=Gcamera060488\nPADEL_KEY_ALIAS=padel-score\nPADEL_KEY_PASSWORD=Gcamera060488\nEOF)",
+      "Bash(./gradlew clean:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(./gradlew app:processReleaseManifest)",
+      "Bash(find /Users/gonzalocamera/Documents/Personal/Proyectos/padel-counter/app/build/intermediates -name AndroidManifest.xml -path */release/*)",
+      "Bash(unzip -l app/build/outputs/bundle/release/app-release.aab)",
+      "Bash(brew install:*)",
+      "Bash(/Users/gonzalocamera/Library/Android/sdk/build-tools/36.1.0/aapt2 dump:*)"
     ]
   }
 }

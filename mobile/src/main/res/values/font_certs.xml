@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Google Play Services font provider certificates.
+
+    The placeholder strings below MUST be replaced with the official certs from
+    https://developer.android.com/develop/ui/views/text-and-emoji/downloadable-fonts
+    or by generating a Font Provider XML via Android Studio (File > New > XML > Font Provider).
+
+    Until valid certs are in place, GoogleFont requests will fail and Compose will
+    fall back to the platform default font (FontFamily.SansSerif). The app remains
+    fully functional with the fallback — only the custom typography is downgraded.
+-->
+<resources>
+    <array name="com_google_android_gms_fonts_certs">
+        <item>@array/com_google_android_gms_fonts_certs_dev</item>
+        <item>@array/com_google_android_gms_fonts_certs_prod</item>
+    </array>
+    <string-array name="com_google_android_gms_fonts_certs_dev">
+        <item>REPLACE_WITH_OFFICIAL_DEV_CERT</item>
+    </string-array>
+    <string-array name="com_google_android_gms_fonts_certs_prod">
+        <item>REPLACE_WITH_OFFICIAL_PROD_CERT</item>
+    </string-array>
+</resources>

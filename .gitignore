@@ -9,6 +9,8 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+# Per-module build outputs
+**/build/
 # Paparazzi screenshot snapshots (local only)
 app/src/test/snapshots/
 /captures
@@ -19,3 +21,8 @@ app/src/test/snapshots/
 .cxx
 local.properties
 .idea/
+.claude/mwdd-state.json
+.claude/paused/
+.claude/settings.local.json
+.claude/skills/
+.claude/worktrees/

@@ -4,55 +4,77 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Padel Score — a Wear OS (Android) app for tracking padel tennis scores. Kotlin + Jetpack Compose, targeting 40mm+ watches (API 30-34).
+Padel Score — a multi-module Android app for tracking padel tennis scores. Companion architecture: a Wear OS watch app (`:wear`) paired with a phone app (`:mobile`), sharing scoring logic via `:shared`. Both modules share `applicationId = com.gonzalocamera.padelcounter` and are published as a single Play Store listing.
 
 ## Build & Test Commands
 
 ```bash
-./gradlew build                              # Build the project
-./gradlew test                               # Run all unit tests
-./gradlew test --tests "*PadelLogicTest"     # Run scoring logic tests only
-./gradlew installDebug                       # Install on connected watch/emulator
+# Full build
+./gradlew build
 
-# Screenshots (Paparazzi — no emulator needed)
-./gradlew recordPaparazziDebug --tests "*CounterScreenshot*"
-# Output: app/src/test/snapshots/images/
+# Tests by module
+./gradlew :shared:test                                  # Scoring logic + codec (pure JVM, fast)
+./gradlew :shared:test --tests "*PadelLogicTest"        # Scoring logic only
+./gradlew :shared:test --tests "*MatchCodecTest"        # Serialization codec only
+./gradlew :wear:test                                    # Wear module tests
+./gradlew :mobile:test                                  # Mobile module tests
 
-# Release build (requires keystore configured in ~/.gradle/gradle.properties)
-./gradlew bundleRelease                      # Build AAB for Play Store
-# Output: app/build/outputs/bundle/release/app-release.aab
+# Install on connected device/emulator
+./gradlew :wear:installDebug                            # Install wear app
+./gradlew :mobile:installDebug                          # Install mobile app
+
+# Screenshot tests (Paparazzi — no emulator needed)
+./gradlew :wear:recordPaparazziDebug --tests "*CounterScreenshot*"
+./gradlew :mobile:recordPaparazziDebug --tests "*MobileScreenshot*"
+
+# Release builds (keystore configured in ~/.gradle/gradle.properties, see docs/publishing-guide.md)
+./gradlew :mobile:bundleRelease :wear:bundleRelease     # Both AABs
+# Output: mobile/build/outputs/bundle/release/mobile-release.aab
+#         wear/build/outputs/bundle/release/wear-release.aab
 ```
 
 ## Architecture
 
-Three-layer architecture, no ViewModel, no DI — direct instantiation suits this small Wear app.
+Three Gradle modules:
 
-**All source lives in** `app/src/main/java/com/gonzalocamera/padelcounter/presentation/`:
+### `:shared` (pure Kotlin/JVM — no Android dependencies)
+- `PadelState` — immutable data class representing match state
+- `PadelLogic` — pure functions for scoring (`addPointToMy`, `addPointToOpp`, `subtractPointFrom*`, `pointsLabel`). Takes `PadelState` in, returns `PadelState` out.
+- `Match` / `MatchSummary` / `AggregateStats` — domain models for completed matches
+- `MatchCodec` — JSON serialization via kotlinx.serialization for watch↔phone sync
+- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`
 
-- **`MainActivity.kt`** — Single activity with all Composable UI. Navigation between three screens (COUNTER, SETTINGS, NEW_MATCH) via `mutableStateOf` + `AnimatedVisibility`. Gestures: tap to score, double-tap to subtract, swipe-left for settings.
-- **`PadelLogic.kt`** — Pure functions for scoring logic (`addPointToMy`, `addPointToOpp`, `subtractPointFromMy`, `subtractPointFromOpp`, `pointsLabel`). No side effects — takes `PadelState` in, returns `PadelState` out. This is the most testable layer.
-- **`PadelDataStore.kt`** — `PadelRepository` class wrapping AndroidX DataStore Preferences. Holds `PadelState` (immutable data class) and exposes it as a `Flow`. All persistence is suspend-based.
-- **`theme/Theme.kt`** — Minimal Wear Material3 theme wrapper.
+### `:wear` (Wear OS, API 30-34, Compose for Wear)
+- Single-activity (`MainActivity.kt`) with three screens (COUNTER, SETTINGS, NEW_MATCH) navigated via `mutableStateOf` + `AnimatedVisibility`. No ViewModel, no DI.
+- `PadelDataStore` — `PadelRepository` wrapping DataStore Preferences, exposes `PadelState` as `Flow`
+- `sync/` — `WearSyncQueue` + `WearSyncSender` enqueue completed matches and push to phone via Wearable DataClient
+- Gestures: tap to score, double-tap to subtract, swipe-left for settings
+- `ScreenMetrics` adapts layout for round vs square screens (constraint: `fw² + fh² ≤ 1.0`)
 
-**Tests:** `app/src/test/.../PadelLogicTest.kt` — 45 tests using JUnit 4 + Google Truth covering normal scoring, deuce/advantage, golden point, tie-breaks (TB7 and SUPER10), and point subtraction.
+### `:mobile` (Phone app, API 26+, Material3 Compose)
+- Uses ViewModels + `ViewModelFactory` for DI (manual, no framework)
+- Navigation Compose with bottom nav: Scoring, History, Stats, Settings
+- `data/db/` — Room database (`PadelDatabase`, `MatchDao`, `MatchEntity`) for match history persistence
+- `data/MobilePreferences` — DataStore for in-progress match state and user preferences
+- `data/MobileRepository` — single repository coordinating Room + DataStore
+- `sync/SyncBridgeListener` — receives match data from watch via Wearable DataClient
+- `sync/SyncBridgeClient` — checks watch connectivity
+
+### Data flow: Watch → Phone sync
+Watch finishes match → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPending()` sends via `DataClient` → Phone's `SyncBridgeListener` receives → inserts into Room via `MobileRepository`.
 
 ## Key Domain Concepts
 
 - **Scoring progression:** 0 → 15 → 30 → 40 → Game (indexed 0-4 in `myPointsIdx`/`oppPointsIdx`)
-- **Golden Point:** At 40-40, next point wins (no deuce). Toggled per match.
-- **Deuce/AD:** When golden point is off, 40-40 → advantage → win or back to deuce
-- **Tie-break:** Triggers at 6-6 games. Two modes: TB7 (first to 7) or SUPER10 (first to 10)
+- **Scoring modes:** `DEUCE` (40-40 → advantage), `GOLDEN_POINT` (40-40 → next point wins), `STAR_POINT`
+- **Tie-break:** Triggers at 6-6 games. `TB7` (first to 7) or `SUPER10` (first to 10), win by 2
+- **Best-of:** Configurable match length (default: best of 3 sets)
 - **State is immutable:** Always use `PadelState.copy()` for updates
 
 ## Conventions
 
-- **Commit format:** Conventional Commits — `feat(wear): ...`, `fix: ...`, `refactor: ...`
+- **Commit format:** Conventional Commits — `feat(wear): ...`, `fix(mobile): ...`, `refactor(shared): ...`
 - **UI text:** Spanish for user-facing strings, English for code identifiers
-- **Pure functions preferred** in logic layer — no unnecessary dependencies or side effects
-- **Responsive layout:** `ScreenMetrics` adapts court size for round vs square screens. Round screens use smaller fractions to fit within the inscribed circle (`fw² + fh² ≤ 1.0`)
-- **Haptic feedback:** `TextHandleMove` for taps, `LongPress` for double-taps
-
-## Enums
-
-- `Decider`: `TB7` | `SUPER10` — tie-break format
-- `CourtColorOption`: `BLUE` | `ORANGE` | `GREEN` | `PURPLE`
+- **Pure functions preferred** in `:shared` logic — no side effects
+- **Versioning:** `PADEL_VERSION_CODE` and `PADEL_VERSION_NAME` in root `gradle.properties`, shared by both `:mobile` and `:wear`. Build enforces consistency via `checkVersionConsistency` task.
+- **Haptic feedback (wear):** `TextHandleMove` for taps, `LongPress` for double-taps

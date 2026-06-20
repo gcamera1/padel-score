@@ -6,12 +6,12 @@ package com.gonzalocamera.padelcounter.shared
  * Semántica: HIGH = más sensible = umbral bajo = cuenta más golpes (capta hasta los suaves).
  * LOW = menos sensible = umbral alto = cuenta menos (solo golpes fuertes).
  *
- * Valores TENTATIVOS — se calibran con el modo "Probar contador" del reloj.
+ * Valores calibrados en cancha: "Medio" (50) es el punto de referencia validado.
  */
 fun StrokeSensitivity.thresholdMs2(): Float = when (this) {
-    StrokeSensitivity.HIGH -> 22f
-    StrokeSensitivity.MEDIUM -> 32f
-    StrokeSensitivity.LOW -> 50f
+    StrokeSensitivity.HIGH -> 32f
+    StrokeSensitivity.MEDIUM -> 50f
+    StrokeSensitivity.LOW -> 68f
 }
 
 /**

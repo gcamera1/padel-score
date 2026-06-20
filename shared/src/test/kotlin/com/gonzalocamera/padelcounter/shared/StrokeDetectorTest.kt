@@ -62,7 +62,7 @@ class StrokeDetectorTest {
 
     @Test
     fun `higher sensitivity counts a soft stroke that lower sensitivity misses`() {
-        val softStroke = 26f   // entre HIGH(22) y MEDIUM(32)
+        val softStroke = 40f   // entre HIGH(32) y MEDIUM(50)
         val ts = 1000L
         assertThat(StrokeDetector(StrokeSensitivity.HIGH.thresholdMs2()).onSample(softStroke, ts)).isTrue()
         assertThat(StrokeDetector(StrokeSensitivity.MEDIUM.thresholdMs2()).onSample(softStroke, ts)).isFalse()

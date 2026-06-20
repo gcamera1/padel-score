@@ -49,11 +49,11 @@ Semántica: `HIGH` = más sensible = umbral **bajo** = cuenta más. `LOW` = umbr
 package com.gonzalocamera.padelcounter.shared
 
 /** Umbral de magnitud de aceleración (m/s²) por nivel de sensibilidad.
- *  Valores TENTATIVOS — se calibran con el test mode del reloj. */
+ *  Calibrados en cancha: "Medio" (50) es el punto de referencia validado. */
 fun StrokeSensitivity.thresholdMs2(): Float = when (this) {
-    StrokeSensitivity.HIGH   -> 22f   // capta hasta golpes suaves
-    StrokeSensitivity.MEDIUM -> 32f   // default
-    StrokeSensitivity.LOW    -> 50f   // solo golpes fuertes
+    StrokeSensitivity.HIGH   -> 32f   // capta hasta golpes suaves
+    StrokeSensitivity.MEDIUM -> 50f   // default (validado en cancha)
+    StrokeSensitivity.LOW    -> 68f   // solo golpes fuertes
 }
 
 /**

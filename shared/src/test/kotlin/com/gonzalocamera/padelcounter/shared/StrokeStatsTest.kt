@@ -106,4 +106,59 @@ class StrokeStatsTest {
         assertThat(agg.verdict).isNull()
         assertThat(agg.totalStrokes).isEqualTo(0)
     }
+
+    // --- updated 7ma thresholds (FDD) ---
+
+    @Test
+    fun `verdict 7ma respects FDD band edges`() {
+        val c = PadelCategory.SEPTIMA
+        assertThat(c.verdict(4.1f)).isEqualTo(StrokeVerdict.FRIDGE)
+        assertThat(c.verdict(4.2f)).isEqualTo(StrokeVerdict.NORMAL)
+        assertThat(c.verdict(6.5f)).isEqualTo(StrokeVerdict.NORMAL)
+        assertThat(c.verdict(6.6f)).isEqualTo(StrokeVerdict.HIGH_LOAD)
+        assertThat(c.verdict(8.5f)).isEqualTo(StrokeVerdict.HIGH_LOAD)
+        assertThat(c.verdict(8.6f)).isEqualTo(StrokeVerdict.MARATHON)
+    }
+
+    // --- estimateStrokes (calculadora) ---
+
+    @Test
+    fun `estimateStrokes defaults land in normal for 6ta`() {
+        val e = estimateStrokes(18, PointIntensity.MEDIUM, 0.25f, PadelCategory.SEXTA)
+        assertThat(e.totalStrokes).isEqualTo(155)   // round(18*5.5*6.25*0.25)
+        assertThat(e.pgg).isWithin(0.1f).of(8.6f)
+        assertThat(PadelCategory.SEXTA.verdict(e.pgg)).isEqualTo(StrokeVerdict.NORMAL)
+    }
+
+    @Test
+    fun `estimateStrokes pgg is independent of games`() {
+        val a = estimateStrokes(12, PointIntensity.MEDIUM, 0.25f, PadelCategory.SEXTA)
+        val b = estimateStrokes(36, PointIntensity.MEDIUM, 0.25f, PadelCategory.SEXTA)
+        assertThat(a.pgg).isWithin(0.05f).of(b.pgg)
+        assertThat(b.totalStrokes).isGreaterThan(a.totalStrokes)   // pero el total sí escala
+    }
+
+    @Test
+    fun `estimateStrokes intensity raises pgg`() {
+        val low = estimateStrokes(18, PointIntensity.LOW, 0.25f, PadelCategory.SEXTA).pgg
+        val med = estimateStrokes(18, PointIntensity.MEDIUM, 0.25f, PadelCategory.SEXTA).pgg
+        val high = estimateStrokes(18, PointIntensity.HIGH, 0.25f, PadelCategory.SEXTA).pgg
+        assertThat(low).isLessThan(med)
+        assertThat(med).isLessThan(high)
+    }
+
+    @Test
+    fun `estimateStrokes shotsPerPoint scales total by category`() {
+        val sep = estimateStrokes(18, PointIntensity.MEDIUM, 0.25f, PadelCategory.SEPTIMA).totalStrokes
+        val sex = estimateStrokes(18, PointIntensity.MEDIUM, 0.25f, PadelCategory.SEXTA).totalStrokes
+        val qui = estimateStrokes(18, PointIntensity.MEDIUM, 0.25f, PadelCategory.QUINTA).totalStrokes
+        assertThat(sep).isLessThan(sex)
+        assertThat(sex).isLessThan(qui)
+    }
+
+    @Test
+    fun `estimateStrokes zero games does not crash`() {
+        val e = estimateStrokes(0, PointIntensity.MEDIUM, 0.25f, PadelCategory.SEXTA)
+        assertThat(e.pgg).isEqualTo(0f)
+    }
 }

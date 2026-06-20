@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -46,7 +47,10 @@ private fun categoryLabel(category: PadelCategory): String = when (category) {
 }
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    onOpenCalculator: () -> Unit = {},
+) {
     val prefs by viewModel.preferences.collectAsState()
     SettingsContent(
         prefs = prefs,
@@ -54,6 +58,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         onCourtColorChange = viewModel::setCourtColor,
         onThemeChange = viewModel::setThemeMode,
         onCategoryChange = viewModel::setCategory,
+        onOpenCalculator = onOpenCalculator,
     )
 }
 
@@ -65,6 +70,7 @@ internal fun SettingsContent(
     onCourtColorChange: (CourtColorOption) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit = {},
     onCategoryChange: (PadelCategory) -> Unit = {},
+    onOpenCalculator: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -157,6 +163,17 @@ internal fun SettingsContent(
                         shape = SegmentedButtonDefaults.itemShape(i, categoryOptions.size),
                     ) { Text(categoryLabel(category)) }
                 }
+            }
+        }
+
+        Column {
+            SectionHeader("HERRAMIENTAS")
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onOpenCalculator,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Calculadora de golpes")
             }
         }
 

@@ -1,5 +1,7 @@
 package com.gonzalocamera.padelcounter.shared
 
+import kotlin.math.roundToInt
+
 /**
  * Lógica pura de interpretación de golpes (etapa 2 — celular).
  *
@@ -60,6 +62,30 @@ fun Match.strokeStats(category: PadelCategory): StrokeStats? {
     val totalGames = setsScore.sumOf { gamesInSet(it) }
     val pgg = pggOf(totalStrokes, totalGames)
     return StrokeStats(perSet, totalStrokes, totalGames, pgg, category.verdict(pgg))
+}
+
+data class StrokeEstimate(
+    val totalStrokes: Int,
+    val pgg: Float,
+)
+
+/**
+ * Estimación manual de golpes (calculadora). Pura.
+ * @param involvement fracción 0..1 (ej. 0.25 = 25%).
+ *
+ * Nota: el PGG no depende de [games] (se cancela); games solo escala el total.
+ */
+fun estimateStrokes(
+    games: Int,
+    intensity: PointIntensity,
+    involvement: Float,
+    category: PadelCategory,
+): StrokeEstimate {
+    val totalPoints = games * intensity.pointsPerGame
+    val totalShots = totalPoints * category.shotsPerPoint
+    val yourStrokes = (totalShots * involvement).roundToInt()
+    val pgg = if (games > 0) yourStrokes.toFloat() / games else 0f
+    return StrokeEstimate(yourStrokes, pgg)
 }
 
 /** Agregado histórico sobre los partidos que tienen dato de golpes. */

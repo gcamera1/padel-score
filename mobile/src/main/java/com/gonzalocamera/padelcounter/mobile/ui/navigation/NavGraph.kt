@@ -37,6 +37,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.window.core.layout.WindowWidthSizeClass
+import com.gonzalocamera.padelcounter.mobile.ui.calculator.CalculatorScreen
 import com.gonzalocamera.padelcounter.mobile.ui.history.HistoryScreen
 import com.gonzalocamera.padelcounter.mobile.ui.history.HistoryViewModel
 import com.gonzalocamera.padelcounter.mobile.ui.history.MatchDetailScreen
@@ -166,7 +167,13 @@ private fun NavHostContent(
         }
         composable("settings") {
             val vm: SettingsViewModel = viewModel(factory = factory)
-            SettingsScreen(viewModel = vm)
+            SettingsScreen(
+                viewModel = vm,
+                onOpenCalculator = { navController.navigate("calculator") },
+            )
+        }
+        composable("calculator") {
+            CalculatorScreen(onBack = { navController.popBackStack() })
         }
         composable(
             route = "match_detail/{matchId}",

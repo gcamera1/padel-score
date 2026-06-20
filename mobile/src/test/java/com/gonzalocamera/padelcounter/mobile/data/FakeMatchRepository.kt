@@ -37,6 +37,8 @@ class FakeMatchRepository(
     var savedStates: List<PadelState> = emptyList()
         private set
 
+    override val matchHistory: Flow<List<Match>> = matchesFlow.asStateFlow()
+
     override val matchSummaries: Flow<List<MatchSummary>> = matchesFlow.map { list ->
         list.map { match ->
             MatchSummary(

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gonzalocamera.padelcounter.mobile.data.MatchRepository
 import com.gonzalocamera.padelcounter.mobile.data.UserPreferences
 import com.gonzalocamera.padelcounter.shared.CourtColorOption
+import com.gonzalocamera.padelcounter.shared.PadelCategory
 import com.gonzalocamera.padelcounter.shared.ThemeMode
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +27,10 @@ class SettingsViewModel(private val repository: MatchRepository) : ViewModel() {
 
     fun setThemeMode(mode: ThemeMode) {
         updatePrefs { it.copy(themeMode = mode) }
+    }
+
+    fun setCategory(category: PadelCategory) {
+        updatePrefs { it.copy(category = category) }
     }
 
     private fun updatePrefs(transform: (UserPreferences) -> UserPreferences) {

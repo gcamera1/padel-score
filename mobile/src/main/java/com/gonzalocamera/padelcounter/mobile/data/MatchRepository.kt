@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
  * tests provide an in-memory fake.
  */
 interface MatchRepository {
+    val matchHistory: Flow<List<Match>>
     val matchSummaries: Flow<List<MatchSummary>>
     val aggregateStats: Flow<AggregateStats>
     val currentState: Flow<PadelState?>

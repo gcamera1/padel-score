@@ -34,7 +34,11 @@ Tres módulos Gradle (`settings.gradle`: `:shared`, `:mobile`, `:wear`):
 - `MatchCodec` — serialización JSON (kotlinx.serialization) para el sync reloj↔celular
 - `StrokeDetector` — detección pura de golpes por picos de aceleración (umbral + debounce),
   testeable sin Android; `StrokeSensitivity.thresholdMs2()` mapea Alto/Medio/Bajo → umbral
-- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`, `StrokeSensitivity`
+- `StrokeStats` — interpretación pura de los golpes (lado celular): `Match.strokeStats(category)`
+  deriva PGG (golpes ÷ games) por set y total; `strokeAggregate(matches, category)` agrega el
+  histórico; `PadelCategory.verdict(pgg)` traduce el PGG en un `StrokeVerdict` calibrado por categoría
+- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`,
+  `StrokeSensitivity`, `PadelCategory`, `StrokeVerdict`
 
 ### `:wear` — Wear OS (API 30–34, Compose for Wear)
 - Single-activity (`MainActivity.kt`) con pantallas (COUNTER, SETTINGS, NEW_MATCH, TUTORIAL,
@@ -54,18 +58,24 @@ Tres módulos Gradle (`settings.gradle`: `:shared`, `:mobile`, `:wear`):
 ### `:mobile` — App de celular (API 26+, Material3 Compose)
 - ViewModels + `ViewModelFactory` para DI (manual, sin framework)
 - Navigation Compose con bottom nav: Scoring, History, Stats, Settings
-- `data/db/` — Room (`PadelDatabase`, `MatchDao`, `MatchEntity`) para el historial
-- `data/MobilePreferences` — DataStore para estado en curso y preferencias
+- `data/db/` — Room (`PadelDatabase`, `MatchDao`, `MatchEntity`) para el historial.
+  `MatchEntity.strokesPerSetJson` persiste el conteo de golpes que llega del reloj (migración 3→4)
+- `data/MobilePreferences` — DataStore para estado en curso y preferencias (incluye `category`)
 - `data/MobileRepository` — repositorio único que coordina Room + DataStore
 - `sync/SyncBridgeListener` — recibe partidos del reloj vía Wearable DataClient
 - `sync/SyncBridgeClient` — chequea conectividad con el reloj
+- **Estadísticas de golpes:** el celular deriva PGG y veredicto (`StrokeStats` en `:shared`)
+  calibrados por la categoría elegida en Ajustes. Se muestran en la sección "GOLPES" del detalle
+  de cada partido (por set + total) y en agregado en la pantalla de Estadísticas
 
 ### Flujo de sync: Reloj → Celular
 El reloj finaliza un partido → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPending()`
 envía vía `DataClient` → `SyncBridgeListener` del celular recibe → inserta en Room
 vía `MobileRepository`. El payload incluye `Match.strokesPerSet` (conteo de golpes por set,
-`null` si el feature está apagado o el sensor no estaba disponible); el celular es el
-responsable de derivar métricas a partir de ese dato crudo.
+`null` si el feature está apagado o el sensor no estaba disponible); el celular **persiste ese
+dato crudo** (columna `strokesPerSetJson`) y deriva las métricas (PGG, veredicto por categoría)
+en tiempo de lectura vía `StrokeStats` — el veredicto no se persiste, así cambiar de categoría
+re-diagnostica todos los partidos.
 
 > Nota: el directorio `app/` es un módulo Wear OS **legacy** que ya no forma parte del
 > build (no está incluido en `settings.gradle`). El módulo de reloj vigente es `:wear`.
@@ -91,6 +101,11 @@ responsable de derivar métricas a partir de ese dato crudo.
   solo cuenta y agrupa por set (dato crudo); toda la interpretación queda para el celular.
   Sensibilidad ajustable (Alto/Medio/Bajo → umbral), calibrable con el modo "Probar contador".
   Requiere llevar el reloj en la muñeca de la paleta
+- **Estadísticas de golpes (celular):** el celular interpreta el dato crudo del reloj. Métrica
+  reina = **PGG** (Promedio de Golpes por Game = golpes ÷ games, normaliza por largo de partido).
+  El PGG se traduce en un **veredicto** (🧊 Heladera / ⚖️ Normal / 🔨 Alto desgaste / 🦸 Maratón)
+  cuyos umbrales dependen de la **categoría** (`PadelCategory`: 7ma/6ta/5ta, elegible en Ajustes).
+  El veredicto se calcula por set y por partido
 
 ---
 

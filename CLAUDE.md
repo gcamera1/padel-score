@@ -45,7 +45,11 @@ Three Gradle modules:
 - `MatchCodec` — JSON serialization via kotlinx.serialization for watch↔phone sync
 - `StrokeDetector` — pure stroke detection by acceleration peaks (threshold + debounce),
   testable without Android; `StrokeSensitivity.thresholdMs2()` maps High/Medium/Low → threshold
-- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`, `StrokeSensitivity`
+- `StrokeStats` — pure interpretation of stroke data (phone side): `Match.strokeStats(category)`
+  derives PGG (strokes ÷ games) per set and total; `strokeAggregate(matches, category)` aggregates
+  history; `PadelCategory.verdict(pgg)` maps PGG → `StrokeVerdict` calibrated by category
+- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`,
+  `StrokeSensitivity`, `PadelCategory`, `StrokeVerdict`
 
 ### `:wear` (Wear OS, API 30-34, Compose for Wear)
 - Single-activity (`MainActivity.kt`) with screens (COUNTER, SETTINGS, NEW_MATCH, TUTORIAL, WALKTHROUGH, MATCH_FINISHED, STROKE_TEST) navigated via `mutableStateOf` + `AnimatedVisibility`. No ViewModel, no DI.
@@ -58,14 +62,18 @@ Three Gradle modules:
 ### `:mobile` (Phone app, API 26+, Material3 Compose)
 - Uses ViewModels + `ViewModelFactory` for DI (manual, no framework)
 - Navigation Compose with bottom nav: Scoring, History, Stats, Settings
-- `data/db/` — Room database (`PadelDatabase`, `MatchDao`, `MatchEntity`) for match history persistence
-- `data/MobilePreferences` — DataStore for in-progress match state and user preferences
+- `data/db/` — Room database (`PadelDatabase`, `MatchDao`, `MatchEntity`) for match history persistence.
+  `MatchEntity.strokesPerSetJson` (nullable) persists the per-set stroke count from the watch (migration 3→4)
+- `data/MobilePreferences` — DataStore for in-progress match state and user preferences (incl. `category`)
 - `data/MobileRepository` — single repository coordinating Room + DataStore
 - `sync/SyncBridgeListener` — receives match data from watch via Wearable DataClient
 - `sync/SyncBridgeClient` — checks watch connectivity
+- **Stroke stats:** phone interprets the watch's raw data via `StrokeStats` (`:shared`). PGG + verdict
+  are derived at read-time (not persisted) using the `PadelCategory` chosen in Settings, and shown in a
+  "GOLPES" section of the match detail (per set + total) and aggregated in the Stats screen
 
 ### Data flow: Watch → Phone sync
-Watch finishes match → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPending()` sends via `DataClient` → Phone's `SyncBridgeListener` receives → inserts into Room via `MobileRepository`. The payload carries `Match.strokesPerSet` (per-set stroke count, `null` when the feature is off or no sensor); the phone derives metrics from that raw data.
+Watch finishes match → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPending()` sends via `DataClient` → Phone's `SyncBridgeListener` receives → inserts into Room via `MobileRepository`. The payload carries `Match.strokesPerSet` (per-set stroke count, `null` when the feature is off or no sensor); the phone **persists that raw data** (`strokesPerSetJson`) and derives metrics (PGG, per-category verdict) at read-time via `StrokeStats` — the verdict is never persisted, so switching category re-diagnoses every past match.
 
 ## Key Domain Concepts
 
@@ -76,6 +84,7 @@ Watch finishes match → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPe
 - **Best-of:** Configurable match length (default: best of 3 sets)
 - **State is immutable:** Always use `PadelState.copy()` for updates
 - **Stroke counting (wear):** on-device peak detection (`StrokeDetector`: magnitude `√(x²+y²+z²)` over threshold + ~350ms debounce). The watch only counts and groups per set (raw data); all interpretation is deferred to the phone. Sensitivity is user-adjustable (High/Medium/Low → threshold), calibrated via the "Probar contador" test mode. Requires wearing the watch on the paddle-hand wrist
+- **Stroke stats (mobile):** key metric is **PGG** (strokes per game = strokes ÷ games, normalizes for match length). PGG maps to a `StrokeVerdict` (🧊 Fridge / ⚖️ Normal / 🔨 High load / 🦸 Marathon) whose thresholds depend on `PadelCategory` (SEPTIMA/SEXTA/QUINTA, chosen in Settings, default SEXTA). Computed per set and per match in `StrokeStats` (`:shared`), derived at read-time — never persisted
 
 ## Conventions
 

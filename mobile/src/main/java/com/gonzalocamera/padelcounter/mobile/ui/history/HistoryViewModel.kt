@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gonzalocamera.padelcounter.mobile.data.MatchRepository
 import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchSummary
+import com.gonzalocamera.padelcounter.shared.PadelCategory
 import com.gonzalocamera.padelcounter.shared.Winner
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,10 @@ class HistoryViewModel(private val repository: MatchRepository) : ViewModel() {
 
     val matches: StateFlow<List<MatchSummary>> = repository.matchSummaries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val category: StateFlow<PadelCategory> = repository.userPreferences
+        .map { it.category }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PadelCategory.SEXTA)
 
     val aggregateLite: StateFlow<HistorySummary> = matches
         .map { list ->

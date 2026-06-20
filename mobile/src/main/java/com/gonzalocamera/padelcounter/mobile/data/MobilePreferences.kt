@@ -21,6 +21,7 @@ data class UserPreferences(
     val defaultScoringMode: ScoringMode = ScoringMode.DEUCE,
     val defaultBestOf: Int = 3,
     val themeMode: ThemeMode = ThemeMode.DARK,
+    val category: PadelCategory = PadelCategory.SEXTA,
 )
 
 class MobilePreferences(private val context: Context) {
@@ -33,6 +34,7 @@ class MobilePreferences(private val context: Context) {
         val DEFAULT_SCORING_MODE = stringPreferencesKey("default_scoring_mode")
         val DEFAULT_BEST_OF = intPreferencesKey("default_best_of")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val CATEGORY = stringPreferencesKey("category")
 
         val MY_SETS = intPreferencesKey("cs_my_sets")
         val OPP_SETS = intPreferencesKey("cs_opp_sets")
@@ -78,6 +80,9 @@ class MobilePreferences(private val context: Context) {
             themeMode = runCatching {
                 ThemeMode.valueOf(prefs[Keys.THEME_MODE] ?: ThemeMode.DARK.name)
             }.getOrDefault(ThemeMode.DARK),
+            category = runCatching {
+                PadelCategory.valueOf(prefs[Keys.CATEGORY] ?: PadelCategory.SEXTA.name)
+            }.getOrDefault(PadelCategory.SEXTA),
         )
     }
 
@@ -89,6 +94,7 @@ class MobilePreferences(private val context: Context) {
             p[Keys.DEFAULT_SCORING_MODE] = prefs.defaultScoringMode.name
             p[Keys.DEFAULT_BEST_OF] = prefs.defaultBestOf
             p[Keys.THEME_MODE] = prefs.themeMode.name
+            p[Keys.CATEGORY] = prefs.category.name
         }
     }
 

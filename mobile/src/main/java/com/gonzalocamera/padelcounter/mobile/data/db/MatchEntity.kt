@@ -18,7 +18,8 @@ data class MatchEntity(
     val scoringMode: String = "DEUCE",
     val winner: String,
     val origin: String,
-    val bestOf: Int = 3
+    val bestOf: Int = 3,
+    val strokesPerSetJson: String? = null
 )
 
 fun Match.toEntity(): MatchEntity = MatchEntity(
@@ -32,7 +33,8 @@ fun Match.toEntity(): MatchEntity = MatchEntity(
     scoringMode = scoringMode.name,
     winner = winner.name,
     origin = origin.name,
-    bestOf = bestOf
+    bestOf = bestOf,
+    strokesPerSetJson = strokesPerSet?.let { Json.encodeToString(it) }
 )
 
 fun MatchEntity.toMatch(): Match = Match(
@@ -48,7 +50,10 @@ fun MatchEntity.toMatch(): Match = Match(
     ),
     winner = Winner.valueOf(winner),
     origin = MatchOrigin.valueOf(origin),
-    bestOf = bestOf
+    bestOf = bestOf,
+    strokesPerSet = strokesPerSetJson?.let {
+        runCatching { Json.decodeFromString<List<Int>>(it) }.getOrNull()
+    }
 )
 
 fun Match.toSummary(): MatchSummary = MatchSummary(

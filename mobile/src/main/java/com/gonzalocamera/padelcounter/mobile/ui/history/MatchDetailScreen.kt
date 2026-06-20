@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,12 +37,15 @@ import androidx.compose.ui.unit.dp
 import com.gonzalocamera.padelcounter.mobile.ui.components.PadelTopAppBar
 import com.gonzalocamera.padelcounter.mobile.ui.components.SectionHeader
 import com.gonzalocamera.padelcounter.mobile.ui.components.SetsBars
+import com.gonzalocamera.padelcounter.mobile.ui.components.StrokeVerdictBadge
 import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelTheme
 import com.gonzalocamera.padelcounter.shared.Decider
 import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchOrigin
+import com.gonzalocamera.padelcounter.shared.PadelCategory
 import com.gonzalocamera.padelcounter.shared.ScoringMode
 import com.gonzalocamera.padelcounter.shared.Winner
+import com.gonzalocamera.padelcounter.shared.strokeStats
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -58,6 +62,7 @@ fun MatchDetailScreen(
     var match by remember { mutableStateOf<Match?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val category by viewModel.category.collectAsState()
 
     LaunchedEffect(matchId) {
         match = viewModel.getMatchDetail(matchId)
@@ -104,7 +109,11 @@ fun MatchDetailScreen(
                 )
             }
 
-            else -> MatchDetailContent(match = match!!, modifier = Modifier.padding(innerPadding))
+            else -> MatchDetailContent(
+                match = match!!,
+                category = category,
+                modifier = Modifier.padding(innerPadding),
+            )
         }
     }
 
@@ -132,6 +141,7 @@ fun MatchDetailScreen(
 @Composable
 internal fun MatchDetailContent(
     match: Match,
+    category: PadelCategory = PadelCategory.SEXTA,
     modifier: Modifier = Modifier,
 ) {
     val win = match.winner == Winner.MY
@@ -196,6 +206,54 @@ internal fun MatchDetailContent(
             SetsBars(setsScore = match.setsScore)
         }
 
+        match.strokeStats(category)?.let { s ->
+            Column {
+                SectionHeader("GOLPES")
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column {
+                        Text(
+                            text = s.totalStrokes.toString(),
+                            style = PadelTheme.sportType.setGameNumeral.copy(fontFeatureSettings = "tnum"),
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Text(
+                            text = "golpes · ${"%.1f".format(s.pgg)} PGG",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                        )
+                    }
+                    StrokeVerdictBadge(s.verdict)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                s.perSet.forEach { set ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Set ${set.setIndex + 1}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                        )
+                        Text(
+                            text = "${set.strokes} · ${"%.1f".format(set.pgg)} PGG",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        StrokeVerdictBadge(set.verdict)
+                    }
+                }
+            }
+        }
+
         Column {
             SectionHeader("DETALLES")
             Spacer(modifier = Modifier.height(12.dp))
@@ -255,6 +313,7 @@ internal fun InlineMatchDetailScaffold(
     match: Match,
     onBack: () -> Unit,
     onDelete: () -> Unit,
+    category: PadelCategory = PadelCategory.SEXTA,
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     Scaffold(
@@ -274,7 +333,11 @@ internal fun InlineMatchDetailScaffold(
             )
         },
     ) { innerPadding ->
-        MatchDetailContent(match = match, modifier = Modifier.padding(innerPadding))
+        MatchDetailContent(
+            match = match,
+            category = category,
+            modifier = Modifier.padding(innerPadding),
+        )
     }
 
     if (showDeleteDialog) {

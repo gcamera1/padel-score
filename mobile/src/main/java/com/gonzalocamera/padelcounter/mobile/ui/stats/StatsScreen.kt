@@ -26,25 +26,29 @@ import androidx.window.core.layout.WindowWidthSizeClass
 import com.gonzalocamera.padelcounter.mobile.ui.components.DotStreak
 import com.gonzalocamera.padelcounter.mobile.ui.components.SectionHeader
 import com.gonzalocamera.padelcounter.mobile.ui.components.StatTile
+import com.gonzalocamera.padelcounter.mobile.ui.components.StrokeVerdictBadge
 import com.gonzalocamera.padelcounter.mobile.ui.components.WinLossSparkline
 import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelTheme
 import com.gonzalocamera.padelcounter.shared.AggregateStats
+import com.gonzalocamera.padelcounter.shared.StrokeAggregate
 import com.gonzalocamera.padelcounter.shared.Winner
 
 @Composable
 fun StatsScreen(viewModel: StatsViewModel) {
     val stats by viewModel.stats.collectAsState()
     val last7 by viewModel.winLossLast7.collectAsState()
+    val strokeStats by viewModel.strokeStats.collectAsState()
     val expanded = currentWindowAdaptiveInfo()
         .windowSizeClass
         .windowWidthSizeClass == WindowWidthSizeClass.EXPANDED
-    StatsContent(stats = stats, last7 = last7, expanded = expanded)
+    StatsContent(stats = stats, last7 = last7, strokeStats = strokeStats, expanded = expanded)
 }
 
 @Composable
 internal fun StatsContent(
     stats: AggregateStats,
     last7: List<Winner> = emptyList(),
+    strokeStats: StrokeAggregate = StrokeAggregate(0, 0, 0f, null, 0),
     expanded: Boolean = false,
 ) {
     Column(
@@ -142,6 +146,46 @@ internal fun StatsContent(
                 myCount = stats.totalSetsWon,
                 oppCount = stats.totalSetsLost,
             )
+        }
+
+        Column {
+            SectionHeader("GOLPES")
+            Spacer(modifier = Modifier.height(10.dp))
+            if (strokeStats.matchesWithData == 0) {
+                Text(
+                    text = "Todavía no registraste partidos con golpes",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    StatTile(
+                        label = "Golpes acumulados",
+                        value = strokeStats.totalStrokes.toString(),
+                        accent = PadelTheme.colors.accentMine,
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatTile(
+                        label = "Intensidad típica",
+                        value = "%.1f".format(strokeStats.avgPgg),
+                        accent = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.weight(1f),
+                        trailing = {
+                            strokeStats.verdict?.let { StrokeVerdictBadge(it) }
+                        },
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                StatTile(
+                    label = "Tu partido más maratónico",
+                    value = "${strokeStats.maxStrokesInMatch} golpes",
+                    accent = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))

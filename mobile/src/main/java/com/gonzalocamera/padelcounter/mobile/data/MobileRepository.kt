@@ -12,7 +12,7 @@ class MobileRepository(
     private val matchDao: MatchDao,
     private val preferences: MobilePreferences,
 ) : MatchRepository {
-    val matchHistory: Flow<List<Match>> = matchDao.observeAll().map { entities ->
+    override val matchHistory: Flow<List<Match>> = matchDao.observeAll().map { entities ->
         entities.map { it.toMatch() }
     }
 

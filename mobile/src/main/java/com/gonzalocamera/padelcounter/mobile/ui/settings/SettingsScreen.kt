@@ -29,6 +29,7 @@ import com.gonzalocamera.padelcounter.mobile.data.UserPreferences
 import com.gonzalocamera.padelcounter.mobile.ui.components.CourtColorThumb
 import com.gonzalocamera.padelcounter.mobile.ui.components.SectionHeader
 import com.gonzalocamera.padelcounter.shared.CourtColorOption
+import com.gonzalocamera.padelcounter.shared.PadelCategory
 import com.gonzalocamera.padelcounter.shared.ThemeMode
 
 private fun courtColorLabel(option: CourtColorOption): String = when (option) {
@@ -36,6 +37,12 @@ private fun courtColorLabel(option: CourtColorOption): String = when (option) {
     CourtColorOption.ORANGE -> "Naranja"
     CourtColorOption.GREEN -> "Verde"
     CourtColorOption.PURPLE -> "Violeta"
+}
+
+private fun categoryLabel(category: PadelCategory): String = when (category) {
+    PadelCategory.SEPTIMA -> "7ma"
+    PadelCategory.SEXTA -> "6ta"
+    PadelCategory.QUINTA -> "5ta"
 }
 
 @Composable
@@ -46,6 +53,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         onKeepScreenOnChange = viewModel::setKeepScreenOn,
         onCourtColorChange = viewModel::setCourtColor,
         onThemeChange = viewModel::setThemeMode,
+        onCategoryChange = viewModel::setCategory,
     )
 }
 
@@ -56,6 +64,7 @@ internal fun SettingsContent(
     onKeepScreenOnChange: (Boolean) -> Unit = {},
     onCourtColorChange: (CourtColorOption) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit = {},
+    onCategoryChange: (PadelCategory) -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -126,6 +135,27 @@ internal fun SettingsContent(
                         selected = prefs.courtColor == option,
                         onClick = { onCourtColorChange(option) },
                     )
+                }
+            }
+        }
+
+        Column {
+            SectionHeader("CATEGORÍA")
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Calibra el diagnóstico de golpes según tu nivel de juego",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            val categoryOptions = PadelCategory.entries
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                categoryOptions.forEachIndexed { i, category ->
+                    SegmentedButton(
+                        selected = prefs.category == category,
+                        onClick = { onCategoryChange(category) },
+                        shape = SegmentedButtonDefaults.itemShape(i, categoryOptions.size),
+                    ) { Text(categoryLabel(category)) }
                 }
             }
         }

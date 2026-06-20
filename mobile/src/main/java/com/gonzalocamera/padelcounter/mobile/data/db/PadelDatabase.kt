@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [MatchEntity::class], version = 3, exportSchema = false)
+@Database(entities = [MatchEntity::class], version = 4, exportSchema = false)
 abstract class PadelDatabase : RoomDatabase() {
     abstract fun matchDao(): MatchDao
 
@@ -28,13 +28,19 @@ abstract class PadelDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE matches ADD COLUMN strokesPerSetJson TEXT")
+            }
+        }
+
         fun getInstance(context: Context): PadelDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     PadelDatabase::class.java,
                     "padel_database"
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { INSTANCE = it }
             }
         }
     }

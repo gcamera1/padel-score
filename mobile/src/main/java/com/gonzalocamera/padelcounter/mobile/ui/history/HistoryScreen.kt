@@ -130,6 +130,7 @@ private fun InlineMatchDetailPane(
     onBack: () -> Unit,
 ) {
     var match by remember { mutableStateOf<Match?>(null) }
+    val category by viewModel.category.collectAsState()
     LaunchedEffect(matchId) { match = viewModel.getMatchDetail(matchId) }
     match?.let {
         InlineMatchDetailScaffold(
@@ -139,6 +140,7 @@ private fun InlineMatchDetailPane(
                 viewModel.deleteMatch(matchId)
                 onBack()
             },
+            category = category,
         )
     }
 }

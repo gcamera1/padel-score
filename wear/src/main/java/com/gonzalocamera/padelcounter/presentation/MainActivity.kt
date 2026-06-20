@@ -46,6 +46,7 @@ import com.gonzalocamera.padelcounter.shared.branding.hex
 import com.gonzalocamera.padelcounter.shared.subtractPointFromMy
 import com.gonzalocamera.padelcounter.shared.subtractPointFromOpp
 import com.gonzalocamera.padelcounter.shared.pointsLabel
+import com.gonzalocamera.padelcounter.shared.isStarPointDecider
 import com.gonzalocamera.padelcounter.shared.isMatchFinished
 import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchOrigin
@@ -399,6 +400,21 @@ internal fun CounterScreen(
                         modifier = Modifier
                             .align(Alignment.Center)
                             .size(with(LocalDensity.current) { metrics.bigScore.toDp() })
+                    )
+                }
+
+                // Indicador "SP": punto definitorio del game en modo Star Point
+                if (!needsServeSelection && isStarPointDecider(state)) {
+                    Text(
+                        text = "SP",
+                        color = Color(0xFF1A0E00),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = metrics.smallSize * 0.72f,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(Color(0xFFC9A46C).copy(alpha = 0.92f))
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
                     )
                 }
 

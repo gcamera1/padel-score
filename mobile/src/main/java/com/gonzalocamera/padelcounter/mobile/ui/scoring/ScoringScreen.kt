@@ -67,6 +67,7 @@ import com.gonzalocamera.padelcounter.shared.ScoringMode
 import com.gonzalocamera.padelcounter.shared.Winner
 import com.gonzalocamera.padelcounter.shared.branding.hex
 import com.gonzalocamera.padelcounter.shared.isMatchFinished
+import com.gonzalocamera.padelcounter.shared.isStarPointDecider
 import com.gonzalocamera.padelcounter.shared.pointsLabel
 
 private fun courtColorToColor(option: CourtColorOption): Color = Color(option.hex())
@@ -530,6 +531,10 @@ private fun CourtContextStrip(state: PadelState) {
     ) {
         if (state.inTieBreak) {
             ContextBadge(text = "TIE-BREAK", tone = BadgeTone.TieBreak)
+            Spacer(modifier = Modifier.size(8.dp))
+        }
+        if (isStarPointDecider(state)) {
+            ContextBadge(text = "SP", tone = BadgeTone.Golden)
             Spacer(modifier = Modifier.size(8.dp))
         }
         ContextBadge(

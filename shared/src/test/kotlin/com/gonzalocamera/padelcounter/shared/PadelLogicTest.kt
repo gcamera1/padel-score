@@ -597,4 +597,41 @@ class PadelLogicTest {
         assertThat(result.setsHistory).isEqualTo(listOf(listOf(2, 6)))
         assertThat(result.oppSets).isEqualTo(1)
     }
+
+    @Test
+    fun `isStarPointDecider true at 40-40 with deuceCount 2 in STAR_POINT`() {
+        val state = PadelState(myPointsIdx = 3, oppPointsIdx = 3, scoringMode = ScoringMode.STAR_POINT, deuceCount = 2)
+        assertThat(isStarPointDecider(state)).isTrue()
+    }
+
+    @Test
+    fun `isStarPointDecider false at 40-40 with deuceCount below 2 in STAR_POINT`() {
+        val state0 = PadelState(myPointsIdx = 3, oppPointsIdx = 3, scoringMode = ScoringMode.STAR_POINT, deuceCount = 0)
+        val state1 = PadelState(myPointsIdx = 3, oppPointsIdx = 3, scoringMode = ScoringMode.STAR_POINT, deuceCount = 1)
+        assertThat(isStarPointDecider(state0)).isFalse()
+        assertThat(isStarPointDecider(state1)).isFalse()
+    }
+
+    @Test
+    fun `isStarPointDecider false when not at 40-40`() {
+        val state = PadelState(myPointsIdx = 3, oppPointsIdx = 2, scoringMode = ScoringMode.STAR_POINT, deuceCount = 2)
+        assertThat(isStarPointDecider(state)).isFalse()
+    }
+
+    @Test
+    fun `isStarPointDecider false in DEUCE and GOLDEN_POINT modes`() {
+        val deuce = PadelState(myPointsIdx = 3, oppPointsIdx = 3, scoringMode = ScoringMode.DEUCE, deuceCount = 2)
+        val golden = PadelState(myPointsIdx = 3, oppPointsIdx = 3, scoringMode = ScoringMode.GOLDEN_POINT, deuceCount = 2)
+        assertThat(isStarPointDecider(deuce)).isFalse()
+        assertThat(isStarPointDecider(golden)).isFalse()
+    }
+
+    @Test
+    fun `isStarPointDecider false during tie-break`() {
+        val state = PadelState(
+            inTieBreak = true, myTbPoints = 5, oppTbPoints = 5,
+            myPointsIdx = 3, oppPointsIdx = 3, scoringMode = ScoringMode.STAR_POINT, deuceCount = 2
+        )
+        assertThat(isStarPointDecider(state)).isFalse()
+    }
 }

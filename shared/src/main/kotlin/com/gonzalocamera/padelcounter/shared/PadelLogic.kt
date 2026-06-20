@@ -28,6 +28,15 @@ fun pointsLabel(state: PadelState, isMe: Boolean): String {
     }
 }
 
+/** True cuando el siguiente punto define el game en modo Star Point
+ *  (40-40 tras agotar las dos ventajas). */
+fun isStarPointDecider(state: PadelState): Boolean =
+    state.scoringMode == ScoringMode.STAR_POINT &&
+        !state.inTieBreak &&
+        state.myPointsIdx == 3 &&
+        state.oppPointsIdx == 3 &&
+        state.deuceCount >= 2
+
 fun addPointToMy(state: PadelState): PadelState =
     if (state.inTieBreak) addTbPoint(state, me = true) else addNormalPoint(state, me = true)
 
@@ -111,13 +120,11 @@ private fun addNormalPoint(state: PadelState, me: Boolean): PadelState {
         return s.copy(serveFromRight = flipServe)
     }
 
-    val starPointGolden = state.scoringMode == ScoringMode.STAR_POINT && state.deuceCount >= 2
-
     return when {
         myIdx == 3 && oppIdx < 3 -> winGame(state, me)
 
         myIdx == 3 && oppIdx == 3 -> {
-            if (starPointGolden) {
+            if (isStarPointDecider(state)) {
                 winGame(state, me)
             } else {
                 val s = if (me) state.copy(myPointsIdx = 4) else state.copy(oppPointsIdx = 4)

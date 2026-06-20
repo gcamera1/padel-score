@@ -56,6 +56,17 @@ private val FINISHED_STATE = PadelState(
     myGames = 6, oppGames = 4
 )
 
+private val STARPOINT_DECIDER_STATE = PadelState(
+    mySets = 1, oppSets = 0,
+    myGames = 4, oppGames = 5,
+    myPointsIdx = 3, oppPointsIdx = 3,
+    scoringMode = ScoringMode.STAR_POINT,
+    deuceCount = 2,
+    courtColor = CourtColorOption.GREEN,
+    isServeSet = true,
+    myServe = true
+)
+
 private val SAMPLE_MATCH_WIN = Match(
     id = "1",
     startedAt = 1716100000000,
@@ -131,6 +142,20 @@ class MobileScreenshot_Scoring {
             PadelMobileTheme {
                 CourtScreen(
                     state = TIEBREAK_STATE,
+                    onTapMy = {},
+                    onTapOpp = {},
+                    onLongPressMy = {},
+                    onLongPressOpp = {}
+                )
+            }
+        }
+    }
+
+    @Test fun courtScreen_starPointDecider() {
+        paparazzi.snapshot {
+            PadelMobileTheme {
+                CourtScreen(
+                    state = STARPOINT_DECIDER_STATE,
                     onTapMy = {},
                     onTapOpp = {},
                     onLongPressMy = {},

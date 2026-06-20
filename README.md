@@ -30,15 +30,23 @@ Tres módulos Gradle (`settings.gradle`: `:shared`, `:mobile`, `:wear`):
   `subtractPointFrom*`, `pointsLabel`, `isStarPointDecider`. Reciben `PadelState`,
   devuelven `PadelState`. Sin side effects.
 - `Match` / `MatchSummary` / `AggregateStats` — modelos de dominio de partidos finalizados
+  (`Match.strokesPerSet: List<Int>?` — conteo de golpes por set, nullable/backward-compatible)
 - `MatchCodec` — serialización JSON (kotlinx.serialization) para el sync reloj↔celular
-- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`
+- `StrokeDetector` — detección pura de golpes por picos de aceleración (umbral + debounce),
+  testeable sin Android; `StrokeSensitivity.thresholdMs2()` mapea Alto/Medio/Bajo → umbral
+- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`, `StrokeSensitivity`
 
 ### `:wear` — Wear OS (API 30–34, Compose for Wear)
-- Single-activity (`MainActivity.kt`) con tres pantallas (COUNTER, SETTINGS, NEW_MATCH)
-  navegadas con `mutableStateOf` + `AnimatedVisibility`. Sin ViewModel ni DI.
+- Single-activity (`MainActivity.kt`) con pantallas (COUNTER, SETTINGS, NEW_MATCH, TUTORIAL,
+  WALKTHROUGH, MATCH_FINISHED, STROKE_TEST) navegadas con `mutableStateOf` +
+  `AnimatedVisibility`. Sin ViewModel ni DI.
 - `PadelDataStore` — `PadelRepository` envuelve DataStore y expone `PadelState` como `Flow`
 - `sync/` — `WearSyncQueue` + `WearSyncSender` encolan partidos finalizados y los envían
   al celular vía Wearable DataClient
+- **Contador de golpes:** `StrokeCounterService` (foreground service) muestrea el
+  acelerómetro durante el partido y, vía `StrokeDetector` (`:shared`), cuenta golpes
+  agrupados por set en `StrokeCounter` (singleton en memoria, respaldo en DataStore por
+  game). Al finalizar, el conteo viaja en `Match.strokesPerSet`
 - Gestos: tap para sumar, double-tap para restar, swipe-left para Ajustes
 - `ScreenMetrics` adapta el layout para pantallas redondas vs cuadradas
   (restricción de safe-area: `fw² + fh² ≤ 1.0`)
@@ -55,7 +63,9 @@ Tres módulos Gradle (`settings.gradle`: `:shared`, `:mobile`, `:wear`):
 ### Flujo de sync: Reloj → Celular
 El reloj finaliza un partido → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPending()`
 envía vía `DataClient` → `SyncBridgeListener` del celular recibe → inserta en Room
-vía `MobileRepository`.
+vía `MobileRepository`. El payload incluye `Match.strokesPerSet` (conteo de golpes por set,
+`null` si el feature está apagado o el sensor no estaba disponible); el celular es el
+responsable de derivar métricas a partir de ese dato crudo.
 
 > Nota: el directorio `app/` es un módulo Wear OS **legacy** que ya no forma parte del
 > build (no está incluido en `settings.gradle`). El módulo de reloj vigente es `:wear`.
@@ -76,6 +86,11 @@ vía `MobileRepository`.
 - **Tie-break:** se activa a 6-6 en games. `TB7` (a 7) o `SUPER10` (a 10), se gana por 2
 - **Best-of:** longitud configurable del partido (default: al mejor de 3 sets)
 - **Estado inmutable:** siempre se actualiza con `PadelState.copy()`
+- **Contador de golpes (reloj):** detección on-device por picos de aceleración
+  (`StrokeDetector`: magnitud `√(x²+y²+z²)` sobre umbral + debounce ~350 ms). El reloj
+  solo cuenta y agrupa por set (dato crudo); toda la interpretación queda para el celular.
+  Sensibilidad ajustable (Alto/Medio/Bajo → umbral), calibrable con el modo "Probar contador".
+  Requiere llevar el reloj en la muñeca de la paleta
 
 ---
 
@@ -91,6 +106,10 @@ vía `MobileRepository`.
 **Ajustes**
 - Pantalla siempre encendida (toggle, aplica `FLAG_KEEP_SCREEN_ON` en tiempo real)
 - Color de cancha: Verde, Naranja, Violeta, Azul (persiste entre partidos)
+- Contador de golpes (toggle ON/OFF, global, default ON)
+- Sensibilidad del sensor: Alto / Medio / Bajo (default Medio)
+- Probar contador: pantalla de calibración con la cancha de fondo, contador en vivo y
+  botones ↺ reiniciar / ✕ salir (registra el acelerómetro en tiempo real)
 
 **Nuevo partido**
 - Elige desempate (TB7 / SUPER10) y modo de scoring; reinicia puntos/games/sets

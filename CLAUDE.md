@@ -41,13 +41,17 @@ Three Gradle modules:
 - `PadelState` — immutable data class representing match state
 - `PadelLogic` — pure functions for scoring (`addPointToMy`, `addPointToOpp`, `subtractPointFrom*`, `pointsLabel`, `isStarPointDecider`). Takes `PadelState` in, returns `PadelState` out.
 - `Match` / `MatchSummary` / `AggregateStats` — domain models for completed matches
+  (`Match.strokesPerSet: List<Int>?` — per-set stroke count, nullable/backward-compatible)
 - `MatchCodec` — JSON serialization via kotlinx.serialization for watch↔phone sync
-- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`
+- `StrokeDetector` — pure stroke detection by acceleration peaks (threshold + debounce),
+  testable without Android; `StrokeSensitivity.thresholdMs2()` maps High/Medium/Low → threshold
+- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`, `StrokeSensitivity`
 
 ### `:wear` (Wear OS, API 30-34, Compose for Wear)
-- Single-activity (`MainActivity.kt`) with three screens (COUNTER, SETTINGS, NEW_MATCH) navigated via `mutableStateOf` + `AnimatedVisibility`. No ViewModel, no DI.
+- Single-activity (`MainActivity.kt`) with screens (COUNTER, SETTINGS, NEW_MATCH, TUTORIAL, WALKTHROUGH, MATCH_FINISHED, STROKE_TEST) navigated via `mutableStateOf` + `AnimatedVisibility`. No ViewModel, no DI.
 - `PadelDataStore` — `PadelRepository` wrapping DataStore Preferences, exposes `PadelState` as `Flow`
 - `sync/` — `WearSyncQueue` + `WearSyncSender` enqueue completed matches and push to phone via Wearable DataClient
+- `StrokeCounterService` — foreground service (`foregroundServiceType="health"`) that samples the accelerometer during a match and feeds `StrokeDetector` (`:shared`); strokes accumulate per set in `StrokeCounter` (in-memory singleton, DataStore backup per game). Lifecycle tied to match start/finish; injected into `Match.strokesPerSet` on finish. Test mode (`StrokeTestScreen`) registers the sensor directly from the composable (no service)
 - Gestures: tap to score, double-tap to subtract, swipe-left for settings
 - `ScreenMetrics` adapts layout for round vs square screens (constraint: `fw² + fh² ≤ 1.0`)
 
@@ -61,7 +65,7 @@ Three Gradle modules:
 - `sync/SyncBridgeClient` — checks watch connectivity
 
 ### Data flow: Watch → Phone sync
-Watch finishes match → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPending()` sends via `DataClient` → Phone's `SyncBridgeListener` receives → inserts into Room via `MobileRepository`.
+Watch finishes match → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPending()` sends via `DataClient` → Phone's `SyncBridgeListener` receives → inserts into Room via `MobileRepository`. The payload carries `Match.strokesPerSet` (per-set stroke count, `null` when the feature is off or no sensor); the phone derives metrics from that raw data.
 
 ## Key Domain Concepts
 
@@ -71,6 +75,7 @@ Watch finishes match → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPe
 - **Tie-break:** Triggers at 6-6 games. `TB7` (first to 7) or `SUPER10` (first to 10), win by 2
 - **Best-of:** Configurable match length (default: best of 3 sets)
 - **State is immutable:** Always use `PadelState.copy()` for updates
+- **Stroke counting (wear):** on-device peak detection (`StrokeDetector`: magnitude `√(x²+y²+z²)` over threshold + ~350ms debounce). The watch only counts and groups per set (raw data); all interpretation is deferred to the phone. Sensitivity is user-adjustable (High/Medium/Low → threshold), calibrated via the "Probar contador" test mode. Requires wearing the watch on the paddle-hand wrist
 
 ## Conventions
 

@@ -1,194 +1,143 @@
-# Padel Score – Wear OS App
+# Padel Score
 
-Aplicación para Wear OS que registra puntos, games y sets en partidos de pádel con interfaz optimizada para pantallas de 40mm.
+Aplicación multi-módulo para registrar puntos, games y sets en partidos de pádel.
+Arquitectura **companion**: una app de reloj **Wear OS** (`:wear`) emparejada con una
+app de **celular** (`:mobile`), que comparten la lógica de scoring vía `:shared`.
+Ambos módulos comparten `applicationId = com.gonzalocamera.padelcounter` y se publican
+como un único listado en Play Store.
+
+**Versión actual:** 1.0.0 (versionCode 5)
 
 ## Stack
 
-- **Kotlin** + **Jetpack Compose for Wear OS**
-- **DataStore** para persistencia de estado
-- **JUnit4** + **Truth** + **Coroutines Test** para testing
-- Arquitectura simple: `presentation` (UI) → `logic` (PadelLogic) → `repository` (PadelRepository)
+- **Kotlin** (proyecto Gradle multi-módulo)
+- **Jetpack Compose** — Compose for Wear OS (`:wear`) + Material3 (`:mobile`)
+- **DataStore Preferences** — estado en curso y preferencias
+- **Room** — persistencia del historial de partidos (`:mobile`)
+- **kotlinx.serialization** — codec JSON para el sync reloj↔celular (`:shared`)
+- **Wearable DataClient** — transporte del sync entre dispositivos
+- **Testing:** JUnit4 + Truth + Coroutines Test + **Paparazzi** (screenshot tests)
 
 ---
 
 ## Arquitectura
 
-### Capas
+Tres módulos Gradle (`settings.gradle`: `:shared`, `:mobile`, `:wear`):
 
-1. **Presentation** (`MainActivity.kt`)
-   - Composables UI (CounterScreen, SettingsScreen, NewMatchScreen)
-   - Manejo de navegación entre pantallas
-   - Gestión de haptic feedback y responsive design
+### `:shared` — Kotlin/JVM puro (sin dependencias Android)
+- `PadelState` — data class inmutable del estado del partido
+- `PadelLogic` — funciones puras de scoring: `addPointToMy`, `addPointToOpp`,
+  `subtractPointFrom*`, `pointsLabel`, `isStarPointDecider`. Reciben `PadelState`,
+  devuelven `PadelState`. Sin side effects.
+- `Match` / `MatchSummary` / `AggregateStats` — modelos de dominio de partidos finalizados
+- `MatchCodec` — serialización JSON (kotlinx.serialization) para el sync reloj↔celular
+- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`
 
-2. **Logic** (`PadelLogic.kt`)
-   - Funciones puras: `addPointToMy()`, `addPointToOpp()`, `subtractPointFrom*()`
-   - Cálculos de scoring (games, sets, tie-break, golden point)
-   - Sin side effects; input → output
+### `:wear` — Wear OS (API 30–34, Compose for Wear)
+- Single-activity (`MainActivity.kt`) con tres pantallas (COUNTER, SETTINGS, NEW_MATCH)
+  navegadas con `mutableStateOf` + `AnimatedVisibility`. Sin ViewModel ni DI.
+- `PadelDataStore` — `PadelRepository` envuelve DataStore y expone `PadelState` como `Flow`
+- `sync/` — `WearSyncQueue` + `WearSyncSender` encolan partidos finalizados y los envían
+  al celular vía Wearable DataClient
+- Gestos: tap para sumar, double-tap para restar, swipe-left para Ajustes
+- `ScreenMetrics` adapta el layout para pantallas redondas vs cuadradas
+  (restricción de safe-area: `fw² + fh² ≤ 1.0`)
 
-3. **Repository** (`PadelDataStore.kt`)
-   - `PadelRepository`: capa de persistencia con DataStore
-   - `PadelState`: data class inmutable del estado del partido
-   - `PadelRepository.stateFlow`: Flow reactivo para UI
+### `:mobile` — App de celular (API 26+, Material3 Compose)
+- ViewModels + `ViewModelFactory` para DI (manual, sin framework)
+- Navigation Compose con bottom nav: Scoring, History, Stats, Settings
+- `data/db/` — Room (`PadelDatabase`, `MatchDao`, `MatchEntity`) para el historial
+- `data/MobilePreferences` — DataStore para estado en curso y preferencias
+- `data/MobileRepository` — repositorio único que coordina Room + DataStore
+- `sync/SyncBridgeListener` — recibe partidos del reloj vía Wearable DataClient
+- `sync/SyncBridgeClient` — chequea conectividad con el reloj
 
-### Módulos
+### Flujo de sync: Reloj → Celular
+El reloj finaliza un partido → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPending()`
+envía vía `DataClient` → `SyncBridgeListener` del celular recibe → inserta en Room
+vía `MobileRepository`.
 
-```
-app/src/main/java/com/gonzalocamera/padelcounter/
-├── presentation/
-│   ├── MainActivity.kt          # Activity y punto de entrada
-│   ├── PadelDataStore.kt        # Repository y State
-│   └── PadelLogic.kt            # Lógica de scoring
-└── resources/
-    └── values/
-        └── strings.xml          # Recursos (español)
-
-app/src/test/java/com/gonzalocamera/padelcounter/
-├── presentation/
-│   ├── PadelLogicTest.kt        # Tests de lógica de scoring
-│   └── PadelRepositoryTest.kt   # Tests de persistencia
-```
-
----
-
-## Reglas de UX
-
-### Scoring – Pantalla Principal
-
-**Tap**
-- Tap en zona **superior** → suma punto al rival
-- Tap en zona **inferior** → suma punto a vos
-- Feedback háptico: `TextHandleMove`
-
-**Double Tap**
-- Double tap en zona **superior** → resta punto al rival
-- Double tap en zona **inferior** → resta punto a vos
-- Feedback háptico: `LongPress`
-
-**Highlight**
-- Al presionar, la zona se ilumina con color translúcido (verde para vos, rojo para rival)
-
-### Scoring – Reglas de Juego
-
-**Game Normal (0/15/30/40)**
-- Índices: 0 → "0" | 1 → "15" | 2 → "30" | 3 → "40" | 4 → "AD"
-
-**Golden Point** (sin AD)
-- En 40-40, el próximo punto gana el game inmediatamente
-- Se configura al iniciar nuevo partido (default: activado)
-
-**Deuce con AD** (cuando golden point desactivado)
-- 40-40 → el siguiente punto pasa a 40-AD
-- Si estás en AD y marcas → ganas game
-- Si estabas en AD y el otro marca → vuelve a Deuce (40-40)
-
-**Tie-Break** (desempate)
-- Se activa **solo** cuando games llegan a 6-6
-- Puntuación continua (0, 1, 2, 3…)
-- Target: **7 puntos** (TB7, default) o **10 puntos** (SUPER10, configurable)
-- Diferencia mínima: 2 puntos para ganar
-
-**Set**
-- Gana quien primero llegue a 6 games con diferencia de 2
-- Excepción: 7-6 en tie-break
-
-**Swipe**
-- Swipe horizontal en contador → abre Ajustes
-
-### Ajustes
-
-**Pantalla siempre encendida**
-- Toggle simple: Activado/Desactivado
-- Aplica `FLAG_KEEP_SCREEN_ON` en tiempo real
-
-**Color de cancha**
-- Opciones: Verde, Naranja, Violeta, Azul
-- Swipe o tap para cambiar color
-- Indicador visual (puntos blancos) mostrando opción activa
-- Color seleccionado persiste entre partidos
-
-**Nuevo Partido**
-- Elige desempate: TB7 (a 7) o SUPER10 (a 10)
-- Elige golden point: Activado/Desactivado
-- Reinicia puntos, games, sets
-- Mantiene preferencias de pantalla y color
-
-### Responsive Design
-
-**Pantallas 40mm** (prioridad)
-- Cero padding adicional para maximizar área visible
-- Cancha ocupa ~88% ancho × 82% alto
-- Texto ajustado para legibilidad
-
-**Pantallas mayores** (40–46mm)
-- Padding y espaciado aumentan levemente
-- Tamaños de fuente escalados
+> Nota: el directorio `app/` es un módulo Wear OS **legacy** que ya no forma parte del
+> build (no está incluido en `settings.gradle`). El módulo de reloj vigente es `:wear`.
 
 ---
 
-## Convenciones de Código
+## Conceptos de dominio
 
-- **Nombres UI**: español (ej: "Padel Score", "Nuevo partido")
-- **Código**: inglés (funciones, variables)
-- **Funciones puras**: preferidas en lógica; evitar side effects
-- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/)
-  - Ejemplo: `feat(wear): add golden point toggle`
+- **Progresión de puntos:** 0 → 15 → 30 → 40 → Game (índices 0–4 en `myPointsIdx`/`oppPointsIdx`)
+- **Modos de scoring (`ScoringMode`):**
+  - `DEUCE` — clásico: 40-40 → ventaja (AD) → game
+  - `GOLDEN_POINT` — 40-40 → el siguiente punto gana el game (muerte súbita)
+  - `STAR_POINT` — híbrido: permite dos ciclos AD/Deuce; agotadas las dos ventajas
+    (`deuceCount >= 2`), el siguiente punto a 40-40 define el game
+- **Indicador "SP":** badge dorado que aparece en reloj y celular **solo** en el punto
+  definitorio de Star Point (`isStarPointDecider`), para avisar que el próximo punto
+  cierra el game sí o sí
+- **Tie-break:** se activa a 6-6 en games. `TB7` (a 7) o `SUPER10` (a 10), se gana por 2
+- **Best-of:** longitud configurable del partido (default: al mejor de 3 sets)
+- **Estado inmutable:** siempre se actualiza con `PadelState.copy()`
 
 ---
 
-## Testing
+## Reglas de UX (reloj)
 
-### Suite de Tests
+**Scoring**
+- Tap zona **superior** → punto al rival · Tap zona **inferior** → punto a vos
+  (háptica `TextHandleMove`)
+- Double-tap → resta punto en la zona correspondiente (háptica `LongPress`)
+- Al presionar, la zona se ilumina (verde vos, rojo rival)
+- Swipe horizontal → abre Ajustes
 
-#### `PadelLogicTest.kt`
-- **Normal game scoring**: progresión 0 → 15 → 30 → 40 → win
-- **Golden Point**: ganar inmediatamente en 40-40
-- **Deuce con AD**: cambios entre Deuce ↔ AD, win desde AD
-- **Set win**: lógica de 6-0, 6-4, 7-5, etc.
-- **Tie-break**: entrada en 6-6, scoring, win con TB7 y SUPER10
-- **Subtract points**: decrementos y edge cases
-- **Complex scenarios**: secuencias largas de juego
+**Ajustes**
+- Pantalla siempre encendida (toggle, aplica `FLAG_KEEP_SCREEN_ON` en tiempo real)
+- Color de cancha: Verde, Naranja, Violeta, Azul (persiste entre partidos)
 
-#### `PadelRepositoryTest.kt`
-- **Persistencia**: guardar y cargar estado
-- **Preferencias**: keep screen on, court color, golden point, decider
-- **Reset match**: reinicia scores pero preserva preferences
+**Nuevo partido**
+- Elige desempate (TB7 / SUPER10) y modo de scoring; reinicia puntos/games/sets
+  preservando preferencias
 
-### Ejecutar Tests
+**Responsive**
+- `ScreenMetrics` adapta padding, fracciones de cancha y tamaños de fuente según
+  tamaño y forma (redonda/cuadrada) de la pantalla
+
+---
+
+## Convenciones
+
+- **Texto UI:** español · **Código (identificadores):** inglés
+- **Funciones puras** preferidas en `:shared` (sin side effects)
+- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) —
+  `feat(wear): ...`, `fix(mobile): ...`, `refactor(shared): ...`
+- **Versionado:** `PADEL_VERSION_CODE` / `PADEL_VERSION_NAME` en `gradle.properties`,
+  compartidos por `:mobile` y `:wear` (el build valida consistencia con `checkVersionConsistency`)
+
+---
+
+## Build & Test
 
 ```bash
-# Ejecutar TODOS los tests
-./gradlew test
+# Build completo
+./gradlew build
 
-# Ejecutar tests de lógica únicamente
-./gradlew test --tests "*PadelLogicTest"
-
-# Ejecutar tests de repositorio únicamente
-./gradlew test --tests "*PadelRepositoryTest"
-
-# Ver reporte detallado
-./gradlew test --info
-```
-
-### Resultado esperado
-
-Todos los tests deben pasar (54 tests en total):
-- 45 en `PadelLogicTest`
-- 9 en `PadelRepositoryTest`
-
----
-
-## Build & Run
-
-```bash
-# Build debug APK
-./gradlew assembleDebug
+# Tests por módulo
+./gradlew :shared:test                               # Lógica de scoring + codec (JVM puro, rápido)
+./gradlew :shared:test --tests "*PadelLogicTest"     # Solo lógica de scoring
+./gradlew :shared:test --tests "*MatchCodecTest"     # Solo el codec de serialización
+./gradlew :mobile:test                               # Tests de mobile (ViewModels, etc.)
+./gradlew :wear:test                                 # Tests de wear
 
 # Instalar en dispositivo/emulador
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+./gradlew :wear:installDebug
+./gradlew :mobile:installDebug
 
-# Build & install + ejecutar app
-./gradlew installDebug
-adb shell am start -n com.gonzalocamera.padelcounter/com.gonzalocamera.padelcounter.presentation.MainActivity
+# Screenshot tests (Paparazzi — sin emulador)
+./gradlew :wear:recordPaparazziDebug --tests "*CounterScreenshot*"
+./gradlew :mobile:recordPaparazziDebug --tests "*MobileScreenshot*"
+
+# Release (keystore en ~/.gradle/gradle.properties, ver docs/publishing-guide.md)
+./gradlew :mobile:bundleRelease :wear:bundleRelease
+# Output: mobile/build/outputs/bundle/release/mobile-release.aab
+#         wear/build/outputs/bundle/release/wear-release.aab
 ```
 
 ---

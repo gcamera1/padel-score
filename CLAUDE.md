@@ -39,7 +39,7 @@ Three Gradle modules:
 
 ### `:shared` (pure Kotlin/JVM — no Android dependencies)
 - `PadelState` — immutable data class representing match state
-- `PadelLogic` — pure functions for scoring (`addPointToMy`, `addPointToOpp`, `subtractPointFrom*`, `pointsLabel`). Takes `PadelState` in, returns `PadelState` out.
+- `PadelLogic` — pure functions for scoring (`addPointToMy`, `addPointToOpp`, `subtractPointFrom*`, `pointsLabel`, `isStarPointDecider`). Takes `PadelState` in, returns `PadelState` out.
 - `Match` / `MatchSummary` / `AggregateStats` — domain models for completed matches
 - `MatchCodec` — JSON serialization via kotlinx.serialization for watch↔phone sync
 - `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`
@@ -66,7 +66,8 @@ Watch finishes match → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPe
 ## Key Domain Concepts
 
 - **Scoring progression:** 0 → 15 → 30 → 40 → Game (indexed 0-4 in `myPointsIdx`/`oppPointsIdx`)
-- **Scoring modes:** `DEUCE` (40-40 → advantage), `GOLDEN_POINT` (40-40 → next point wins), `STAR_POINT`
+- **Scoring modes:** `DEUCE` (40-40 → advantage), `GOLDEN_POINT` (40-40 → next point wins), `STAR_POINT` (allows two AD/Deuce cycles; once both advantages are spent — `deuceCount >= 2` — the next point at 40-40 decides the game)
+- **"SP" indicator:** golden badge shown on wear and mobile only on the Star Point deciding point (`isStarPointDecider` in `:shared`), warning that the next point closes the game
 - **Tie-break:** Triggers at 6-6 games. `TB7` (first to 7) or `SUPER10` (first to 10), win by 2
 - **Best-of:** Configurable match length (default: best of 3 sets)
 - **State is immutable:** Always use `PadelState.copy()` for updates

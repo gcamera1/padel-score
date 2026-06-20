@@ -16,6 +16,7 @@ import com.gonzalocamera.padelcounter.shared.CourtColorOption
 import com.gonzalocamera.padelcounter.shared.Decider
 import com.gonzalocamera.padelcounter.shared.PadelState
 import com.gonzalocamera.padelcounter.shared.ScoringMode
+import com.gonzalocamera.padelcounter.shared.StrokeSensitivity
 
 private val Context.dataStore by preferencesDataStore(name = "padel_counter")
 
@@ -48,6 +49,10 @@ class PadelRepository(private val context: Context) {
         val MATCH_STARTED_AT = longPreferencesKey("match_started_at")
 
         val HAS_SEEN_WALKTHROUGH = booleanPreferencesKey("has_seen_walkthrough")
+
+        val STROKE_ENABLED = booleanPreferencesKey("stroke_counting_enabled")
+        val STROKE_SENS = stringPreferencesKey("stroke_sensitivity")
+        val STROKE_BACKUP = stringPreferencesKey("stroke_backup")
     }
 
     val stateFlow: Flow<PadelState> = context.dataStore.data.map { prefs ->
@@ -80,7 +85,11 @@ class PadelRepository(private val context: Context) {
             serveFromRight = prefs[Keys.SERVE_FROM_RIGHT] ?: true,
             tieBreakStartedByMe = prefs[Keys.TB_STARTED_BY_ME] ?: true,
             bestOf = prefs[Keys.BEST_OF] ?: 3,
-            setsHistory = deserializeSetsHistory(prefs[Keys.SETS_HISTORY])
+            setsHistory = deserializeSetsHistory(prefs[Keys.SETS_HISTORY]),
+            strokeCountingEnabled = prefs[Keys.STROKE_ENABLED] ?: true,
+            strokeSensitivity = runCatching {
+                StrokeSensitivity.valueOf(prefs[Keys.STROKE_SENS] ?: StrokeSensitivity.MEDIUM.name)
+            }.getOrDefault(StrokeSensitivity.MEDIUM)
         )
     }
 
@@ -108,6 +117,8 @@ class PadelRepository(private val context: Context) {
             prefs[Keys.TB_STARTED_BY_ME] = newState.tieBreakStartedByMe
             prefs[Keys.BEST_OF] = newState.bestOf
             prefs[Keys.SETS_HISTORY] = Json.encodeToString(newState.setsHistory)
+            prefs[Keys.STROKE_ENABLED] = newState.strokeCountingEnabled
+            prefs[Keys.STROKE_SENS] = newState.strokeSensitivity.name
         }
     }
 
@@ -127,21 +138,42 @@ class PadelRepository(private val context: Context) {
     suspend fun setScoringMode(mode: ScoringMode) = save(current().copy(scoringMode = mode))
     suspend fun setDecider(decider: Decider) = save(current().copy(decider = decider))
     suspend fun setCourtColor(color: CourtColorOption) = save(current().copy(courtColor = color))
+    suspend fun setStrokeCountingEnabled(enabled: Boolean) = save(current().copy(strokeCountingEnabled = enabled))
+    suspend fun setStrokeSensitivity(sensitivity: StrokeSensitivity) = save(current().copy(strokeSensitivity = sensitivity))
+
+    suspend fun writeStrokeBackup(perSet: List<Int>) {
+        context.dataStore.edit { prefs -> prefs[Keys.STROKE_BACKUP] = Json.encodeToString(perSet) }
+    }
+
+    suspend fun readStrokeBackup(): List<Int> {
+        val raw = context.dataStore.data.first()[Keys.STROKE_BACKUP]
+        if (raw.isNullOrBlank()) return emptyList()
+        return runCatching { Json.decodeFromString<List<Int>>(raw) }.getOrDefault(emptyList())
+    }
+
+    suspend fun clearStrokeBackup() {
+        context.dataStore.edit { prefs -> prefs.remove(Keys.STROKE_BACKUP) }
+    }
 
     suspend fun resetMatchWithConfig(decider: Decider, scoringMode: ScoringMode, courtColor: CourtColorOption, bestOf: Int = 3) {
-        val keepOn = current().keepScreenOn
+        val prev = current()
         save(
             PadelState(
-                keepScreenOn = keepOn,
+                keepScreenOn = prev.keepScreenOn,
                 scoringMode = scoringMode,
                 decider = decider,
                 courtColor = courtColor,
-                bestOf = bestOf
+                bestOf = bestOf,
+                strokeCountingEnabled = prev.strokeCountingEnabled,
+                strokeSensitivity = prev.strokeSensitivity
             )
         )
         context.dataStore.edit { prefs ->
             prefs[Keys.MATCH_STARTED_AT] = System.currentTimeMillis()
         }
+        // Conteo de golpes: arrancar de cero para el nuevo partido.
+        clearStrokeBackup()
+        StrokeCounter.reset()
     }
 
     private suspend fun current(): PadelState = stateFlow.first()

@@ -53,6 +53,17 @@ import com.gonzalocamera.padelcounter.shared.MatchOrigin
 import com.gonzalocamera.padelcounter.shared.Winner
 import com.gonzalocamera.padelcounter.sync.WearSyncQueue
 import com.gonzalocamera.padelcounter.sync.WearSyncSender
+import com.gonzalocamera.padelcounter.shared.StrokeSensitivity
+import com.gonzalocamera.padelcounter.shared.StrokeDetector
+import com.gonzalocamera.padelcounter.shared.thresholdMs2
+import android.content.Context
+import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import androidx.core.content.ContextCompat
+import kotlin.math.sqrt
 import java.util.UUID
 
 /**
@@ -133,7 +144,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { COUNTER, SETTINGS, NEW_MATCH, TUTORIAL, WALKTHROUGH, MATCH_FINISHED }
+private enum class Screen { COUNTER, SETTINGS, NEW_MATCH, TUTORIAL, WALKTHROUGH, MATCH_FINISHED, STROKE_TEST }
 
 @Composable
 private fun PadelApp() {
@@ -160,9 +171,24 @@ private fun PadelApp() {
         syncSender.trySendPending()
     }
 
+    // Contador de golpes: arranca el service cuando el partido está en juego y el feature está ON.
+    val matchActive = state.isServeSet && !isMatchFinished(state)
+    LaunchedEffect(matchActive, state.strokeCountingEnabled) {
+        val intent = Intent(context, StrokeCounterService::class.java)
+        if (matchActive && state.strokeCountingEnabled) {
+            ContextCompat.startForegroundService(context, intent)
+        } else {
+            context.stopService(intent)
+        }
+    }
+
     LaunchedEffect(state.mySets, state.oppSets) {
         if (isMatchFinished(state) && screen == Screen.COUNTER && !matchSynced) {
             matchSynced = true
+            context.stopService(Intent(context, StrokeCounterService::class.java))
+            val strokes = if (state.strokeCountingEnabled) {
+                StrokeCounter.snapshot().takeIf { it.isNotEmpty() }
+            } else null
             val match = Match(
                 id = UUID.randomUUID().toString(),
                 startedAt = matchStartedAt ?: System.currentTimeMillis(),
@@ -174,10 +200,13 @@ private fun PadelApp() {
                 scoringMode = state.scoringMode,
                 winner = if (state.mySets > state.oppSets) Winner.MY else Winner.OPP,
                 origin = MatchOrigin.WEAR,
-                bestOf = state.bestOf
+                bestOf = state.bestOf,
+                strokesPerSet = strokes
             )
             syncQueue.enqueue(match)
             syncSender.trySendPending()
+            StrokeCounter.reset()
+            repo.clearStrokeBackup()
             screen = Screen.MATCH_FINISHED
         }
     }
@@ -224,9 +253,24 @@ private fun PadelApp() {
                 state = state,
                 onToggleKeepOn = { scope.launch { repo.setKeepScreenOn(it) } },
                 onCourtColorChange = { scope.launch { repo.setCourtColor(it) } },
+                onToggleStrokeCounting = { scope.launch { repo.setStrokeCountingEnabled(it) } },
+                onStrokeSensitivityChange = { scope.launch { repo.setStrokeSensitivity(it) } },
+                onTestCounter = { screen = Screen.STROKE_TEST },
                 onNewMatch = { screen = Screen.NEW_MATCH },
                 onTutorial = { screen = Screen.TUTORIAL },
                 onBack = { screen = Screen.COUNTER }
+            )
+        }
+
+        AnimatedVisibility(
+            visible = screen == Screen.STROKE_TEST,
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            StrokeTestScreen(
+                state = state,
+                onBack = { screen = Screen.SETTINGS }
             )
         }
 
@@ -714,6 +758,9 @@ private fun SettingsScreen(
     state: PadelState,
     onToggleKeepOn: (Boolean) -> Unit,
     onCourtColorChange: (CourtColorOption) -> Unit,
+    onToggleStrokeCounting: (Boolean) -> Unit,
+    onStrokeSensitivityChange: (StrokeSensitivity) -> Unit,
+    onTestCounter: () -> Unit,
     onNewMatch: () -> Unit,
     onTutorial: () -> Unit,
     onBack: () -> Unit
@@ -867,6 +914,29 @@ private fun SettingsScreen(
                 )
             }
 
+            item { Text("Contador de golpes", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
+            item {
+                ToggleChip(
+                    checked = state.strokeCountingEnabled,
+                    onCheckedChange = onToggleStrokeCounting,
+                    label = { Text(if (state.strokeCountingEnabled) "Activado" else "Desactivado") },
+                    toggleControl = { Switch(checked = state.strokeCountingEnabled) }
+                )
+            }
+
+            if (state.strokeCountingEnabled) {
+                item { Text("Sensibilidad del sensor", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
+                item {
+                    SensitivitySelector(
+                        current = state.strokeSensitivity,
+                        onChange = onStrokeSensitivityChange
+                    )
+                }
+                item {
+                    OutlinedButton(onClick = onTestCounter, modifier = Modifier.fillMaxWidth()) { Text("Probar contador") }
+                }
+            }
+
             item {
                 OutlinedButton(onClick = onTutorial, modifier = Modifier.fillMaxWidth()) { Text("Tutorial") }
             }
@@ -918,6 +988,10 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
         WalkthroughStep(
             title = "Navegación",
             description = "Deslizá a la izquierda\npara abrir Ajustes"
+        ),
+        WalkthroughStep(
+            title = "Contador de golpes",
+            description = "Contamos tus golpes en el partido.\nUsá el reloj en la muñeca\nde la paleta"
         ),
         WalkthroughStep(
             title = "¡Listo!",
@@ -1210,6 +1284,192 @@ private fun MatchFinishedScreen(
             Spacer(Modifier.height(6.dp))
             OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth(0.7f)) {
                 Text("Seguir viendo")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SensitivitySelector(
+    current: StrokeSensitivity,
+    onChange: (StrokeSensitivity) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    val choices = listOf(
+        StrokeSensitivity.HIGH to "Alto",
+        StrokeSensitivity.MEDIUM to "Medio",
+        StrokeSensitivity.LOW to "Bajo"
+    )
+    val currentIdx = choices.indexOfFirst { it.first == current }.coerceAtLeast(0)
+
+    var dragAccum by remember { mutableStateOf(0f) }
+    val swipeThresholdPx = 80f
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(current) {
+                detectHorizontalDragGestures(
+                    onDragStart = { dragAccum = 0f },
+                    onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
+                    onDragEnd = {
+                        if (abs(dragAccum) >= swipeThresholdPx) {
+                            val dir = if (dragAccum > 0f) -1 else 1
+                            val nextIdx = (currentIdx + dir + choices.size) % choices.size
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onChange(choices[nextIdx].first)
+                        }
+                        dragAccum = 0f
+                    }
+                )
+            },
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedContent(
+            targetState = currentIdx,
+            transitionSpec = {
+                val direction = if (targetState > initialState) {
+                    slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                } else {
+                    slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
+                }
+                direction togetherWith slideOutHorizontally(targetOffsetX = { if (targetState > initialState) -it else it }) + fadeOut()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { idx ->
+            val (_, lbl) = choices[idx]
+            Chip(
+                onClick = {
+                    val nextIdx = (currentIdx + 1) % choices.size
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onChange(choices[nextIdx].first)
+                },
+                label = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(lbl)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            choices.indices.forEach { i ->
+                val alpha = if (i == currentIdx) 0.95f else 0.35f
+                Box(
+                    modifier = Modifier
+                        .size(if (i == currentIdx) 6.dp else 5.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = alpha))
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StrokeTestScreen(
+    state: PadelState,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val metrics = rememberScreenMetrics()
+    var count by remember { mutableStateOf(0) }
+
+    // Acelerómetro en tiempo real (sin batching) con la sensibilidad actual.
+    // Se re-registra si cambia la sensibilidad (recrea el detector con el nuevo umbral).
+    DisposableEffect(state.strokeSensitivity) {
+        val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val accel = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val detector = StrokeDetector(state.strokeSensitivity.thresholdMs2())
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(e: SensorEvent) {
+                val x = e.values[0]
+                val y = e.values[1]
+                val z = e.values[2]
+                val m = sqrt(x * x + y * y + z * z)
+                if (detector.onSample(m, e.timestamp / 1_000_000L)) count++
+            }
+            override fun onAccuracyChanged(s: Sensor?, a: Int) { /* no-op */ }
+        }
+        if (accel != null) sm.registerListener(listener, accel, SensorManager.SENSOR_DELAY_GAME)
+        onDispose { sm.unregisterListener(listener) }
+    }
+
+    Scaffold(timeText = { TimeText() }) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(metrics.courtPadding)
+                .pointerInput(Unit) {
+                    var drag = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { drag = 0f },
+                        onHorizontalDrag = { _, amount -> drag += amount },
+                        onDragEnd = {
+                            if (drag >= 110f) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onBack()
+                            }
+                            drag = 0f
+                        }
+                    )
+                }
+        ) {
+            // Cancha centrada con las mismas fracciones/clip que el partido (CounterScreen).
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(metrics.courtWidthFraction)
+                    .fillMaxHeight(metrics.courtHeightFraction)
+                    .clip(RoundedCornerShape(metrics.courtRadius))
+            ) {
+                CourtBackgroundVertical(
+                    courtColor = courtColorToColor(state.courtColor),
+                    isSmall = metrics.isSmall,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Text(
+                    text = count.toString(),
+                    color = Color.White,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = metrics.bigScore,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = if (metrics.isSmall) 8.dp else 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Button(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        count = 0
+                    },
+                    modifier = Modifier.size(36.dp),
+                    colors = ButtonDefaults.secondaryButtonColors()
+                ) { Text("↺", fontSize = 18.sp) }
+
+                Button(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onBack()
+                    },
+                    modifier = Modifier.size(36.dp),
+                    colors = ButtonDefaults.secondaryButtonColors()
+                ) { Text("✕", fontSize = 18.sp) }
             }
         }
     }

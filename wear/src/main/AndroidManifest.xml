@@ -4,6 +4,12 @@
     <!-- Indica que es una app para reloj -->
     <uses-feature android:name="android.hardware.type.watch" />
 
+    <!-- Contador de golpes: foreground service + muestreo de sensores -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Evitar que Android filtre relojes por features implícitas -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
@@ -38,6 +44,11 @@
             </intent-filter>
 
         </activity>
+
+        <service
+            android:name="com.gonzalocamera.padelcounter.presentation.StrokeCounterService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
 
     </application>
 

@@ -20,5 +20,7 @@ data class PadelState(
     val serveFromRight: Boolean = true,
     val tieBreakStartedByMe: Boolean = true,
     val bestOf: Int = 3,
-    val setsHistory: List<List<Int>> = emptyList()
+    val setsHistory: List<List<Int>> = emptyList(),
+    val strokeCountingEnabled: Boolean = true,
+    val strokeSensitivity: StrokeSensitivity = StrokeSensitivity.MEDIUM
 )

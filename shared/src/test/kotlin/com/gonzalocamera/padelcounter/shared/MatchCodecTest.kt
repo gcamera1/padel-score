@@ -191,4 +191,30 @@ class MatchCodecTest {
         val decoded = decodeMatch(json.toByteArray())
         assertThat(decoded.scoringMode).isEqualTo(ScoringMode.STAR_POINT)
     }
+
+    @Test
+    fun `round-trip with strokesPerSet`() {
+        val match = Match(
+            id = "strokes-match",
+            startedAt = 1700000000000L,
+            finishedAt = 1700003600000L,
+            setsScore = listOf(listOf(6, 4), listOf(6, 3)),
+            tieBreakUsed = false,
+            decider = Decider.TB7,
+            scoringMode = ScoringMode.DEUCE,
+            winner = Winner.MY,
+            origin = MatchOrigin.WEAR,
+            strokesPerSet = listOf(42, 38)
+        )
+        val decoded = decodeMatch(encodeMatch(match))
+        assertThat(decoded).isEqualTo(match)
+        assertThat(decoded.strokesPerSet).containsExactly(42, 38).inOrder()
+    }
+
+    @Test
+    fun `decode old match without strokesPerSet defaults to null`() {
+        val json = """{"id":"old-no-strokes","startedAt":0,"finishedAt":0,"setsScore":[[6,0],[6,0]],"tieBreakUsed":false,"decider":"TB7","goldenPoint":false,"scoringMode":"DEUCE","winner":"MY","origin":"WEAR"}"""
+        val decoded = decodeMatch(json.toByteArray())
+        assertThat(decoded.strokesPerSet).isNull()
+    }
 }

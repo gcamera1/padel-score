@@ -14,5 +14,6 @@ data class Match(
     val scoringMode: ScoringMode = ScoringMode.DEUCE,
     val winner: Winner,
     val origin: MatchOrigin,
-    val bestOf: Int = 3
+    val bestOf: Int = 3,
+    val strokesPerSet: List<Int>? = null
 )

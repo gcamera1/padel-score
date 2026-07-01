@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -31,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gonzalocamera.padelcounter.mobile.ui.components.EmptyState
 import com.gonzalocamera.padelcounter.mobile.ui.components.MatchCard
@@ -101,7 +103,15 @@ fun HistoryScreen(
                         },
                     )
                 } else {
-                    EmptyDetailHint()
+                    EmptyDetailHint(
+                        showBackToList = navigator.canNavigateBack(),
+                        onBackToList = {
+                            scope.launch {
+                                navigator.navigateBack()
+                                selectedMatchId = null
+                            }
+                        },
+                    )
                 }
             }
         },
@@ -110,19 +120,38 @@ fun HistoryScreen(
 }
 
 @Composable
-private fun EmptyDetailHint() {
+private fun EmptyDetailHint(
+    showBackToList: Boolean,
+    onBackToList: () -> Unit,
+) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PadelPalette.Background)
+            .padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        ServeBall(size = 40.dp)
-        Spacer(modifier = Modifier.height(12.dp))
+        ServeBall(size = 44.dp)
+        Spacer(modifier = Modifier.height(14.dp))
         Text(
             text = "Elegí un partido",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
         )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "Tocá un partido del historial para ver su detalle.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = PadelTheme.colors.textMuted,
+            textAlign = TextAlign.Center,
+        )
+        if (showBackToList) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(onClick = onBackToList) {
+                Text("Volver al historial")
+            }
+        }
     }
 }
 

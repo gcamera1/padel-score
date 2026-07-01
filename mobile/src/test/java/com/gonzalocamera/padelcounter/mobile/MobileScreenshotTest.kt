@@ -77,8 +77,9 @@ private val SAMPLE_MATCH_WIN = Match(
     decider = Decider.TB7,
     scoringMode = ScoringMode.DEUCE,
     winner = Winner.MY,
-    origin = MatchOrigin.MOBILE,
-    bestOf = 3
+    origin = MatchOrigin.WEAR,
+    bestOf = 3,
+    strokesPerSet = listOf(175, 104, 106)
 )
 
 private val SAMPLE_MATCH_LOSS = Match(

@@ -2,6 +2,7 @@ package com.gonzalocamera.padelcounter.mobile.ui.history
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,12 +34,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gonzalocamera.padelcounter.mobile.ui.components.PadelTopAppBar
 import com.gonzalocamera.padelcounter.mobile.ui.components.PremiumCard
 import com.gonzalocamera.padelcounter.mobile.ui.components.SectionHeader
-import com.gonzalocamera.padelcounter.mobile.ui.components.SetsBars
 import com.gonzalocamera.padelcounter.mobile.ui.components.StrokeVerdictBadge
 import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelPalette
 import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelTheme
@@ -199,84 +200,136 @@ internal fun MatchDetailContent(
             }
         }
 
-        Column {
-            SectionHeader("POR SET")
-            Spacer(modifier = Modifier.height(12.dp))
-            SetsBars(setsScore = match.setsScore)
-        }
+        // --- Box: resultado + golpes por set, todo junto ---
+        val strokes = match.strokeStats(category)
+        PremiumCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+            ) {
+                SectionHeader("Por set")
 
-        match.strokeStats(category)?.let { s ->
-            Column {
-                SectionHeader("GOLPES")
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column {
-                        Text(
-                            text = s.totalStrokes.toString(),
-                            style = PadelTheme.sportType.setGameNumeral.copy(fontFeatureSettings = "tnum"),
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        Text(
-                            text = "golpes · ${"%.1f".format(s.pgg)} PGG",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
-                        )
-                    }
-                    StrokeVerdictBadge(s.verdict)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                s.perSet.forEach { set ->
+                if (strokes != null) {
+                    Spacer(modifier = Modifier.height(14.dp))
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = "Set ${set.setIndex + 1}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
-                        )
-                        Text(
-                            text = "${set.strokes} · ${"%.1f".format(set.pgg)} PGG",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        StrokeVerdictBadge(set.verdict)
+                        Column {
+                            Text(
+                                text = strokes.totalStrokes.toString(),
+                                style = PadelTheme.sportType.setGameNumeral.copy(fontFeatureSettings = "tnum"),
+                                color = PadelTheme.colors.goldLight,
+                            )
+                            Text(
+                                text = "GOLPES TOTALES · ${"%.1f".format(strokes.pgg)} PGG",
+                                style = PadelTheme.sportType.sectionHeader,
+                                color = PadelTheme.colors.textFaint,
+                            )
+                        }
+                        StrokeVerdictBadge(strokes.verdict)
                     }
+                }
+
+                Spacer(modifier = Modifier.height(if (strokes != null) 18.dp else 14.dp))
+                match.setsScore.forEachIndexed { index, set ->
+                    if (index > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(Color.White.copy(alpha = 0.06f)),
+                        )
+                    }
+                    val ps = strokes?.perSet?.getOrNull(index)
+                    SetRow(
+                        setIndex = index,
+                        result = "${set[0]}-${set[1]}",
+                        won = set[0] > set[1],
+                        strokes = ps?.strokes,
+                        pgg = ps?.pgg,
+                        verdict = ps?.verdict,
+                    )
                 }
             }
         }
 
-        Column {
-            SectionHeader("DETALLES")
-            Spacer(modifier = Modifier.height(12.dp))
-            DetailRow("Fecha", dateFormat.format(Date(match.finishedAt)))
-            DetailRow("Duración", formatDuration(durationMinutes))
-            DetailRow("Modo", when (match.scoringMode) {
-                ScoringMode.DEUCE -> "Deuce / Ventaja"
-                ScoringMode.GOLDEN_POINT -> "Punto de Oro"
-                ScoringMode.STAR_POINT -> "Star Point"
-            })
-            DetailRow("Formato", when (match.bestOf) {
-                1 -> "Al mejor de 1 set"
-                3 -> "Al mejor de 3 sets"
-                5 -> "Al mejor de 5 sets"
-                else -> "Al mejor de ${match.bestOf} sets"
-            })
-            DetailRow("Tie-break", if (match.tieBreakUsed) "Sí" else "No")
-            DetailRow("Origen", when (match.origin) {
-                MatchOrigin.WEAR -> "Reloj"
-                MatchOrigin.MOBILE -> "Móvil"
-            })
+        // --- Box: configuración del partido ---
+        PremiumCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            ) {
+                SectionHeader("Configuración")
+                Spacer(modifier = Modifier.height(8.dp))
+                DetailRow("Fecha", dateFormat.format(Date(match.finishedAt)))
+                DetailRow("Duración", formatDuration(durationMinutes))
+                DetailRow("Modo", when (match.scoringMode) {
+                    ScoringMode.DEUCE -> "Deuce / Ventaja"
+                    ScoringMode.GOLDEN_POINT -> "Punto de Oro"
+                    ScoringMode.STAR_POINT -> "Star Point"
+                })
+                DetailRow("Formato", when (match.bestOf) {
+                    1 -> "Al mejor de 1 set"
+                    3 -> "Al mejor de 3 sets"
+                    5 -> "Al mejor de 5 sets"
+                    else -> "Al mejor de ${match.bestOf} sets"
+                })
+                DetailRow("Tie-break", if (match.tieBreakUsed) "Sí" else "No")
+                DetailRow("Origen", when (match.origin) {
+                    MatchOrigin.WEAR -> "Reloj"
+                    MatchOrigin.MOBILE -> "Móvil"
+                })
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun SetRow(
+    setIndex: Int,
+    result: String,
+    won: Boolean,
+    strokes: Int?,
+    pgg: Float?,
+    verdict: com.gonzalocamera.padelcounter.shared.StrokeVerdict?,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            Text(
+                text = "SET ${setIndex + 1}",
+                style = PadelTheme.sportType.sectionHeader,
+                color = PadelTheme.colors.textFaint,
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = result,
+                style = PadelTheme.sportType.matchCardScore,
+                color = if (won) PadelTheme.colors.goldLight else PadelPalette.Text,
+            )
+        }
+        if (verdict != null) {
+            Column(horizontalAlignment = Alignment.End) {
+                StrokeVerdictBadge(verdict)
+                Spacer(modifier = Modifier.height(5.dp))
+                Text(
+                    text = "$strokes golpes · ${"%.1f".format(pgg)} PGG",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PadelTheme.colors.textMuted,
+                )
+            }
+        }
     }
 }
 

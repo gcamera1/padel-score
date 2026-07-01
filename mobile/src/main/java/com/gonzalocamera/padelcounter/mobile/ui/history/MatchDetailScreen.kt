@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -217,7 +218,7 @@ internal fun MatchDetailContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = strokes.totalStrokes.toString(),
                                 style = PadelTheme.sportType.setGameNumeral.copy(fontFeatureSettings = "tnum"),
@@ -229,6 +230,7 @@ internal fun MatchDetailContent(
                                 color = PadelTheme.colors.textFaint,
                             )
                         }
+                        Spacer(modifier = Modifier.width(12.dp))
                         StrokeVerdictBadge(strokes.verdict)
                     }
                 }

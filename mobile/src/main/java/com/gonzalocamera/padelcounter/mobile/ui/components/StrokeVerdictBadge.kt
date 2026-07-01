@@ -46,5 +46,7 @@ fun StrokeVerdictBadge(
             .padding(horizontal = 10.dp, vertical = 4.dp),
         style = PadelTheme.sportType.sectionHeader,
         color = fg,
+        maxLines = 1,
+        softWrap = false,
     )
 }

@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gonzalocamera.padelcounter.mobile.ui.components.PadelTopAppBar
+import com.gonzalocamera.padelcounter.mobile.ui.components.PremiumCard
 import com.gonzalocamera.padelcounter.mobile.ui.components.SectionHeader
 import com.gonzalocamera.padelcounter.mobile.ui.components.StrokeVerdictBadge
 import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelTheme
@@ -98,10 +99,10 @@ fun CalculatorScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(4.dp))
 
             // --- Card de resultado ---
-            Card(
+            PremiumCard(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = MaterialTheme.shapes.large,
+                featured = true,
+                grid = true,
             ) {
                 Column(
                     modifier = Modifier
@@ -115,12 +116,12 @@ fun CalculatorScreen(onBack: () -> Unit) {
                         style = PadelTheme.sportType.scoreNumeral.copy(
                             fontFeatureSettings = "tnum",
                         ),
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = PadelTheme.colors.goldLight,
                     )
                     Text(
-                        text = "golpes estimados · ${"%.1f".format(estimate.pgg)} PGG",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        text = "GOLPES ESTIMADOS · ${"%.1f".format(estimate.pgg)} PGG",
+                        style = PadelTheme.sportType.sectionHeader,
+                        color = PadelTheme.colors.textMuted,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     StrokeVerdictBadge(verdict)

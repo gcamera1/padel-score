@@ -1,5 +1,6 @@
 package com.gonzalocamera.padelcounter.mobile
 
+import androidx.compose.foundation.background
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.gonzalocamera.padelcounter.mobile.data.UserPreferences
@@ -8,7 +9,7 @@ import com.gonzalocamera.padelcounter.mobile.ui.history.HistoryScreenContent
 import com.gonzalocamera.padelcounter.mobile.ui.history.MatchDetailContent
 import com.gonzalocamera.padelcounter.mobile.ui.scoring.CourtScreen
 import com.gonzalocamera.padelcounter.mobile.ui.scoring.MatchEndSheet
-import com.gonzalocamera.padelcounter.mobile.ui.scoring.NewMatchSheet
+import com.gonzalocamera.padelcounter.mobile.ui.scoring.NewMatchSheetContent
 import com.gonzalocamera.padelcounter.mobile.ui.scoring.ServeSelectionScreen
 import com.gonzalocamera.padelcounter.mobile.ui.settings.SettingsContent
 import com.gonzalocamera.padelcounter.mobile.ui.stats.StatsContent
@@ -212,6 +213,27 @@ class MobileScreenshot_Scoring {
                     onConfirm = {},
                     onDiscard = {}
                 )
+            }
+        }
+    }
+
+    @Test fun newMatchSheet() {
+        paparazzi.snapshot {
+            PadelMobileTheme {
+                androidx.compose.foundation.layout.Box(
+                    modifier = androidx.compose.ui.Modifier
+                        .background(com.gonzalocamera.padelcounter.mobile.ui.theme.PadelPalette.Card)
+                ) {
+                    NewMatchSheetContent(
+                        selectedDecider = Decider.TB7,
+                        selectedMode = ScoringMode.GOLDEN_POINT,
+                        selectedBestOf = 3,
+                        onDeciderChange = {},
+                        onModeChange = {},
+                        onBestOfChange = {},
+                        onConfirm = {}
+                    )
+                }
             }
         }
     }

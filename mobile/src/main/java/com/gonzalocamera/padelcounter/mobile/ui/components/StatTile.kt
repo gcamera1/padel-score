@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,14 +19,10 @@ fun StatTile(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    accent: Color = MaterialTheme.colorScheme.onBackground,
+    accent: Color = PadelTheme.colors.goldLight,
     trailing: @Composable (() -> Unit)? = null,
 ) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = MaterialTheme.shapes.medium,
-    ) {
+    PremiumCard(modifier = modifier) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -39,16 +32,16 @@ fun StatTile(
         ) {
             Text(
                 text = value,
-                style = PadelTheme.sportType.setGameNumeral.copy(fontFeatureSettings = "tnum"),
+                style = PadelTheme.sportType.setGameNumeral,
                 color = accent,
             )
             Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                text = label.uppercase(),
+                style = PadelTheme.sportType.sectionHeader,
+                color = PadelTheme.colors.textFaint,
             )
             if (trailing != null) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 trailing()
             }
         }

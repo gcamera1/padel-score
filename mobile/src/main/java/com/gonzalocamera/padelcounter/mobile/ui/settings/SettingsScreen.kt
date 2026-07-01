@@ -107,23 +107,6 @@ internal fun SettingsContent(
                 }
                 Switch(checked = prefs.keepScreenOn, onCheckedChange = onKeepScreenOnChange)
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Tema", style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.height(8.dp))
-            val themeOptions = listOf(
-                ThemeMode.SYSTEM to "Auto",
-                ThemeMode.LIGHT to "Claro",
-                ThemeMode.DARK to "Oscuro",
-            )
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                themeOptions.forEachIndexed { i, (mode, label) ->
-                    SegmentedButton(
-                        selected = prefs.themeMode == mode,
-                        onClick = { onThemeChange(mode) },
-                        shape = SegmentedButtonDefaults.itemShape(i, themeOptions.size),
-                    ) { Text(label) }
-                }
-            }
         }
 
         Column {

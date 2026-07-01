@@ -12,18 +12,23 @@ import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsScore
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelPalette
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -79,14 +84,23 @@ fun NavGraph(
 
     if (useRail && showNavChrome) {
         Row(modifier = modifier.fillMaxSize()) {
-            NavigationRail {
+            NavigationRail(
+                containerColor = PadelPalette.Background,
+            ) {
                 navItems.forEach { item ->
                     val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
                     NavigationRailItem(
                         icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) },
+                        label = { Text(item.label.uppercase(), style = MaterialTheme.typography.labelSmall) },
                         selected = selected,
                         onClick = { navController.navigateToTab(item.route) },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = PadelPalette.Gold,
+                            selectedTextColor = PadelPalette.Gold,
+                            indicatorColor = PadelPalette.Gold.copy(alpha = 0.12f),
+                            unselectedIconColor = PadelPalette.TextFaint,
+                            unselectedTextColor = PadelPalette.TextFaint,
+                        ),
                     )
                 }
             }
@@ -95,16 +109,27 @@ fun NavGraph(
     } else {
         Scaffold(
             modifier = modifier,
+            containerColor = PadelPalette.Background,
             bottomBar = {
                 if (showNavChrome) {
-                    NavigationBar {
+                    NavigationBar(
+                        containerColor = PadelPalette.Background,
+                        modifier = Modifier.topGoldHairline(),
+                    ) {
                         navItems.forEach { item ->
                             val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
                             NavigationBarItem(
                                 icon = { Icon(item.icon, contentDescription = item.label) },
-                                label = { Text(item.label) },
+                                label = { Text(item.label.uppercase(), style = MaterialTheme.typography.labelSmall) },
                                 selected = selected,
                                 onClick = { navController.navigateToTab(item.route) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = PadelPalette.Gold,
+                                    selectedTextColor = PadelPalette.Gold,
+                                    indicatorColor = PadelPalette.Gold.copy(alpha = 0.12f),
+                                    unselectedIconColor = PadelPalette.TextFaint,
+                                    unselectedTextColor = PadelPalette.TextFaint,
+                                ),
                             )
                         }
                     }
@@ -118,6 +143,15 @@ fun NavGraph(
             )
         }
     }
+}
+
+private fun Modifier.topGoldHairline(): Modifier = drawBehind {
+    drawLine(
+        color = PadelPalette.Gold.copy(alpha = 0.25f),
+        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+        end = androidx.compose.ui.geometry.Offset(size.width, 0f),
+        strokeWidth = 1.5f,
+    )
 }
 
 private fun shouldUseRail(info: WindowAdaptiveInfo): Boolean {

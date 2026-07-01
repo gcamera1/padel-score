@@ -1,5 +1,6 @@
 package com.gonzalocamera.padelcounter.mobile.ui.history
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,9 +36,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gonzalocamera.padelcounter.mobile.ui.components.PadelTopAppBar
+import com.gonzalocamera.padelcounter.mobile.ui.components.PremiumCard
 import com.gonzalocamera.padelcounter.mobile.ui.components.SectionHeader
 import com.gonzalocamera.padelcounter.mobile.ui.components.SetsBars
 import com.gonzalocamera.padelcounter.mobile.ui.components.StrokeVerdictBadge
+import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelPalette
 import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelTheme
 import com.gonzalocamera.padelcounter.shared.Decider
 import com.gonzalocamera.padelcounter.shared.Match
@@ -145,24 +148,23 @@ internal fun MatchDetailContent(
     modifier: Modifier = Modifier,
 ) {
     val win = match.winner == Winner.MY
-    val accent = if (win) PadelTheme.colors.accentMine else PadelTheme.colors.accentRival
+    val accent = if (win) PadelTheme.colors.goldLight else PadelTheme.colors.textMuted
     val durationMinutes = ((match.finishedAt - match.startedAt) / 60_000).coerceAtLeast(0L)
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(PadelPalette.Background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Spacer(modifier = Modifier.height(4.dp))
 
-        Card(
+        PremiumCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = if (win) PadelTheme.colors.winSurface else PadelTheme.colors.lossSurface,
-            ),
-            shape = MaterialTheme.shapes.large,
+            featured = win,
+            grid = true,
         ) {
             Column(
                 modifier = Modifier
@@ -178,12 +180,9 @@ internal fun MatchDetailContent(
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = match.setsScore.joinToString("  ") { "${it[0]}-${it[1]}" },
-                    style = PadelTheme.sportType.scoreNumeral.copy(
-                        fontSize = androidx.compose.ui.unit.TextUnit(56f, androidx.compose.ui.unit.TextUnitType.Sp),
-                        fontFeatureSettings = "tnum",
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground,
+                    text = match.setsScore.joinToString("   ") { "${it[0]}-${it[1]}" },
+                    style = PadelTheme.sportType.scoreNumeral.copy(fontFeatureSettings = "tnum"),
+                    color = PadelPalette.Text,
                 )
                 Text(
                     text = buildString {
@@ -194,8 +193,8 @@ internal fun MatchDetailContent(
                         append(" · ")
                         append(formatDuration(durationMinutes))
                     },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    style = PadelTheme.sportType.sectionHeader,
+                    color = PadelTheme.colors.textMuted,
                 )
             }
         }

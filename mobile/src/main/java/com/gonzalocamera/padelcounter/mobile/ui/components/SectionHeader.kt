@@ -1,6 +1,5 @@
 package com.gonzalocamera.padelcounter.mobile.ui.components
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -12,9 +11,9 @@ fun SectionHeader(
     modifier: Modifier = Modifier,
 ) {
     Text(
-        text = text,
+        text = text.uppercase(),
         style = PadelTheme.sportType.sectionHeader,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+        color = PadelTheme.colors.textMuted,
         modifier = modifier,
     )
 }

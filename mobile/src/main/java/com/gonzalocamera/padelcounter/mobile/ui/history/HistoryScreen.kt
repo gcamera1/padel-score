@@ -2,6 +2,7 @@ package com.gonzalocamera.padelcounter.mobile.ui.history
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -35,6 +36,8 @@ import com.gonzalocamera.padelcounter.mobile.ui.components.EmptyState
 import com.gonzalocamera.padelcounter.mobile.ui.components.MatchCard
 import com.gonzalocamera.padelcounter.mobile.ui.components.SectionHeader
 import com.gonzalocamera.padelcounter.mobile.ui.components.ServeBall
+import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelPalette
+import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelTheme
 import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchSummary
 import kotlinx.coroutines.launch
@@ -174,21 +177,22 @@ internal fun HistoryScreenContent(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .background(PadelPalette.Background)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Historial",
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.displayMedium,
+                color = PadelTheme.colors.gold,
             )
             Text(
-                text = "$totalMatches partidos · $winPct% V",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                modifier = Modifier.padding(bottom = 8.dp),
+                text = "$totalMatches PARTIDOS · $winPct% V",
+                style = PadelTheme.sportType.sectionHeader,
+                color = PadelTheme.colors.textFaint,
+                modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
             )
         }
 
@@ -197,6 +201,7 @@ internal fun HistoryScreenContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .background(PadelPalette.Background)
                         .padding(vertical = 8.dp),
                 ) {
                     SectionHeader(period)

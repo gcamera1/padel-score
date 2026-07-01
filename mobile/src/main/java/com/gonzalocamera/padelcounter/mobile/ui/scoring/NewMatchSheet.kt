@@ -49,77 +49,100 @@ fun NewMatchSheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        Column(
-            modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            Text(
-                text = "Nuevo partido",
-                style = MaterialTheme.typography.headlineMedium,
-            )
+        NewMatchSheetContent(
+            selectedDecider = selectedDecider,
+            selectedMode = selectedMode,
+            selectedBestOf = selectedBestOf,
+            onDeciderChange = { selectedDecider = it },
+            onModeChange = { selectedMode = it },
+            onBestOfChange = { selectedBestOf = it },
+            onConfirm = { onConfirm(selectedDecider, selectedMode, selectedBestOf) },
+        )
+    }
+}
 
-            Column {
-                SectionHeader("DEFINICIÓN")
-                Spacer(modifier = Modifier.height(8.dp))
-                val deciderOptions = listOf(Decider.TB7 to "TB a 7", Decider.SUPER10 to "Súper TB 10")
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    deciderOptions.forEachIndexed { i, (opt, label) ->
-                        SegmentedButton(
-                            selected = selectedDecider == opt,
-                            onClick = { selectedDecider = opt },
-                            shape = SegmentedButtonDefaults.itemShape(i, deciderOptions.size),
-                        ) { Text(label) }
-                    }
-                }
-            }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun NewMatchSheetContent(
+    selectedDecider: Decider,
+    selectedMode: ScoringMode,
+    selectedBestOf: Int,
+    onDeciderChange: (Decider) -> Unit,
+    onModeChange: (ScoringMode) -> Unit,
+    onBestOfChange: (Int) -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .imePadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        Text(
+            text = "Nuevo partido",
+            style = MaterialTheme.typography.headlineLarge,
+            color = com.gonzalocamera.padelcounter.mobile.ui.theme.PadelTheme.colors.gold,
+        )
 
-            Column {
-                SectionHeader("MODO DE JUEGO")
-                Spacer(modifier = Modifier.height(8.dp))
-                val modeOptions = listOf(
-                    ScoringMode.DEUCE to "Deuce",
-                    ScoringMode.GOLDEN_POINT to "Pto. Oro",
-                    ScoringMode.STAR_POINT to "Star Pt.",
-                )
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    modeOptions.forEachIndexed { i, (opt, label) ->
-                        SegmentedButton(
-                            selected = selectedMode == opt,
-                            onClick = { selectedMode = opt },
-                            shape = SegmentedButtonDefaults.itemShape(i, modeOptions.size),
-                        ) { Text(label) }
-                    }
-                }
-            }
-
-            Column {
-                SectionHeader("SETS")
-                Spacer(modifier = Modifier.height(8.dp))
-                val bestOfOptions = listOf(1, 3, 5)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    bestOfOptions.forEachIndexed { i, n ->
-                        SegmentedButton(
-                            selected = selectedBestOf == n,
-                            onClick = { selectedBestOf = n },
-                            shape = SegmentedButtonDefaults.itemShape(i, bestOfOptions.size),
-                        ) { Text("$n") }
-                    }
-                }
-            }
-
+        Column {
+            SectionHeader("DEFINICIÓN")
             Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = { onConfirm(selectedDecider, selectedMode, selectedBestOf) },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Arrancar partido")
+            val deciderOptions = listOf(Decider.TB7 to "TB a 7", Decider.SUPER10 to "Súper TB 10")
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                deciderOptions.forEachIndexed { i, (opt, label) ->
+                    SegmentedButton(
+                        selected = selectedDecider == opt,
+                        onClick = { onDeciderChange(opt) },
+                        shape = SegmentedButtonDefaults.itemShape(i, deciderOptions.size),
+                    ) { Text(label) }
+                }
             }
+        }
+
+        Column {
+            SectionHeader("MODO DE JUEGO")
+            Spacer(modifier = Modifier.height(8.dp))
+            val modeOptions = listOf(
+                ScoringMode.DEUCE to "Deuce",
+                ScoringMode.GOLDEN_POINT to "Pto. Oro",
+                ScoringMode.STAR_POINT to "Star Pt.",
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                modeOptions.forEachIndexed { i, (opt, label) ->
+                    SegmentedButton(
+                        selected = selectedMode == opt,
+                        onClick = { onModeChange(opt) },
+                        shape = SegmentedButtonDefaults.itemShape(i, modeOptions.size),
+                    ) { Text(label) }
+                }
+            }
+        }
+
+        Column {
+            SectionHeader("SETS")
+            Spacer(modifier = Modifier.height(8.dp))
+            val bestOfOptions = listOf(1, 3, 5)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                bestOfOptions.forEachIndexed { i, n ->
+                    SegmentedButton(
+                        selected = selectedBestOf == n,
+                        onClick = { onBestOfChange(n) },
+                        shape = SegmentedButtonDefaults.itemShape(i, bestOfOptions.size),
+                    ) { Text("$n") }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onConfirm,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Arrancar partido")
         }
     }
 }

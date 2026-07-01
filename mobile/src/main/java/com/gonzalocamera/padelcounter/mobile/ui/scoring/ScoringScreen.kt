@@ -234,67 +234,80 @@ internal fun ServeSelectionScreen(
     onSelectMyServe: () -> Unit,
     onSelectOppServe: () -> Unit,
 ) {
-    val rival = PadelTheme.colors.accentRival
-    val mine = PadelTheme.colors.accentMine
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(com.gonzalocamera.padelcounter.mobile.ui.theme.PadelPalette.Background),
+    ) {
+        ServeHalf(
+            label = "Saca rival",
+            highlighted = false,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .background(rival.copy(alpha = 0.18f))
                 .combinedClickable(onClick = onSelectOppServe, onLongClick = {})
                 .semantics {
                     role = Role.Button
                     contentDescription = "Saca rival"
                 },
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                ServeBall(size = 48.dp)
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Saca rival",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-        }
+        )
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(vertical = 12.dp),
+                .background(com.gonzalocamera.padelcounter.mobile.ui.theme.PadelPalette.Card)
+                .padding(vertical = 14.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "¿Quién saca?",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                text = "¿QUIÉN SACA?",
+                style = PadelTheme.sportType.sectionHeader,
+                color = PadelTheme.colors.gold,
             )
         }
 
-        Box(
+        ServeHalf(
+            label = "Saco yo",
+            highlighted = true,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .background(mine.copy(alpha = 0.26f))
                 .combinedClickable(onClick = onSelectMyServe, onLongClick = {})
                 .semantics {
                     role = Role.Button
                     contentDescription = "Saco yo"
                 },
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                ServeBall(size = 48.dp)
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Saco yo",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
+        )
+    }
+}
+
+@Composable
+private fun ServeHalf(
+    label: String,
+    highlighted: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val gold = PadelTheme.colors.gold
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        if (highlighted) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(gold.copy(alpha = 0.16f), Color.Transparent),
+                        ),
+                    ),
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            ServeBall(size = 48.dp)
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleLarge,
+                color = if (highlighted) gold else PadelTheme.colors.textMuted,
+            )
         }
     }
 }

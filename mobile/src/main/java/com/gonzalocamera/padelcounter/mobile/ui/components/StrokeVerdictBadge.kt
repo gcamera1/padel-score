@@ -1,6 +1,7 @@
 package com.gonzalocamera.padelcounter.mobile.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -20,11 +21,12 @@ fun StrokeVerdict.display(): Pair<String, String> = when (this) {
     StrokeVerdict.MARATHON -> "🦸" to "Maratón"
 }
 
-private fun StrokeVerdict.tone(): Pair<Color, Color> = when (this) {
-    StrokeVerdict.FRIDGE -> Color(0xFF1E3A5F) to Color(0xFFBFE0FF)
-    StrokeVerdict.NORMAL -> Color(0xFF1F3D2B) to Color(0xFFB8F0C9)
-    StrokeVerdict.HIGH_LOAD -> Color(0xFF5A3A12) to Color(0xFFFFD8A8)
-    StrokeVerdict.MARATHON -> Color(0xFF5A1A1A) to Color(0xFFFFC2C2)
+// bg, fg, border — tuned to the matte-black + gold premium palette.
+private fun StrokeVerdict.tone(): Triple<Color, Color, Color> = when (this) {
+    StrokeVerdict.FRIDGE -> Triple(Color(0xFF12181F), Color(0xFF8FB4D6), Color(0xFF2A3A4A))
+    StrokeVerdict.NORMAL -> Triple(Color(0xFF1A1D1F), Color(0xFFE2E5E8), Color(0xFF33383C))
+    StrokeVerdict.HIGH_LOAD -> Triple(Color(0xFF2A2310), Color(0xFFE5C453), Color(0xFF8A6F30))
+    StrokeVerdict.MARATHON -> Triple(Color(0xFF2A1414), Color(0xFFF09A9A), Color(0xFF5A2424))
 }
 
 /** Badge con el diagnóstico de volumen de golpes (emoji + texto). */
@@ -34,12 +36,13 @@ fun StrokeVerdictBadge(
     modifier: Modifier = Modifier,
 ) {
     val (emoji, label) = verdict.display()
-    val (bg, fg) = verdict.tone()
+    val (bg, fg, border) = verdict.tone()
     Text(
         text = "$emoji $label",
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
             .background(bg)
+            .border(1.dp, border, RoundedCornerShape(999.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp),
         style = PadelTheme.sportType.sectionHeader,
         color = fg,

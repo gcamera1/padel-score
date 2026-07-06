@@ -12,7 +12,7 @@ android {
         applicationId = "com.gonzalocamera.padelcounter"
         minSdk = 30
         targetSdk = 34
-        versionCode = (project.properties["PADEL_VERSION_CODE"] as String).toInt()
+        versionCode = (project.properties["PADEL_WEAR_VERSION_CODE"] as String).toInt()
         versionName = project.properties["PADEL_VERSION_NAME"] as String
     }
 

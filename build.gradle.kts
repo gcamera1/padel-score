@@ -11,12 +11,14 @@ plugins {
 
 tasks.register("checkVersionConsistency") {
     doLast {
-        val mobileVersion = project.properties["PADEL_VERSION_CODE"]
-        val wearVersion = project.properties["PADEL_VERSION_CODE"]
-        require(mobileVersion == wearVersion) {
-            "versionCode mismatch: mobile=$mobileVersion, wear=$wearVersion"
+        val mobileVersion = (project.properties["PADEL_MOBILE_VERSION_CODE"] as String).toInt()
+        val wearVersion = (project.properties["PADEL_WEAR_VERSION_CODE"] as String).toInt()
+        // Play requires a distinct versionCode per bundle when phone + wear ship
+        // together, so these MUST differ. versionName stays shared across modules.
+        require(mobileVersion != wearVersion) {
+            "versionCode collision: mobile and wear must differ (both=$mobileVersion)"
         }
-        println("Version consistency OK: versionCode=$mobileVersion")
+        println("Version OK: mobile versionCode=$mobileVersion, wear versionCode=$wearVersion")
     }
 }
 

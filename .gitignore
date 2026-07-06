@@ -26,3 +26,5 @@ local.properties
 .claude/settings.local.json
 .claude/skills/
 .claude/worktrees/
+# Store publishing artifacts (AABs + generated store assets, local only)
+release-artifacts/

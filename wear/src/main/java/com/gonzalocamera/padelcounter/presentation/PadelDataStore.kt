@@ -49,6 +49,8 @@ class PadelRepository(private val context: Context) {
         val MATCH_STARTED_AT = longPreferencesKey("match_started_at")
 
         val HAS_SEEN_WALKTHROUGH = booleanPreferencesKey("has_seen_walkthrough")
+        val STARTUP_COMPANION_PROMPT_COUNT = intPreferencesKey("startup_companion_prompt_count")
+        val MATCHEND_COMPANION_PROMPT_COUNT = intPreferencesKey("matchend_companion_prompt_count")
 
         val STROKE_ENABLED = booleanPreferencesKey("stroke_counting_enabled")
         val STROKE_SENS = stringPreferencesKey("stroke_sensitivity")
@@ -128,6 +130,28 @@ class PadelRepository(private val context: Context) {
 
     suspend fun setHasSeenWalkthrough() {
         context.dataStore.edit { prefs -> prefs[Keys.HAS_SEEN_WALKTHROUGH] = true }
+    }
+
+    // Contadores de avisos "instalá la app de teléfono" (máx 3 c/u), persistentes
+    // fuera de PadelState para que NO se reseteen al empezar un partido nuevo.
+    val startupCompanionPromptCount: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.STARTUP_COMPANION_PROMPT_COUNT] ?: 0
+    }
+
+    suspend fun incrementStartupCompanionPromptCount() {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.STARTUP_COMPANION_PROMPT_COUNT] = (prefs[Keys.STARTUP_COMPANION_PROMPT_COUNT] ?: 0) + 1
+        }
+    }
+
+    val matchEndCompanionPromptCount: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.MATCHEND_COMPANION_PROMPT_COUNT] ?: 0
+    }
+
+    suspend fun incrementMatchEndCompanionPromptCount() {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.MATCHEND_COMPANION_PROMPT_COUNT] = (prefs[Keys.MATCHEND_COMPANION_PROMPT_COUNT] ?: 0) + 1
+        }
     }
 
     val matchStartedAt: Flow<Long?> = context.dataStore.data.map { prefs ->

@@ -24,6 +24,7 @@ material3Adaptive = "1.0.0"
 
 # Google Play Services
 playServicesWearable = "18.2.0"
+wearRemoteInteractions = "1.0.0"
 
 # Kotlin libraries
 kotlinxSerialization = "1.6.3"
@@ -80,6 +81,8 @@ room-testing = { group = "androidx.room", name = "room-testing", version.ref = "
 
 # Google Play Services
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
+# Wear ↔ phone interactions (RemoteActivityHelper para abrir Play en el teléfono)
+wear-remote-interactions = { group = "androidx.wear", name = "wear-remote-interactions", version.ref = "wearRemoteInteractions" }
 
 # Kotlin libraries
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }

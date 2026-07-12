@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Capability announced by the phone app so the Wear OS app can detect that
+         the companion is installed (via CapabilityClient). -->
+    <string-array name="android_wear_capabilities">
+        <item>verify_remote_padel_phone_app</item>
+    </string-array>
+</resources>

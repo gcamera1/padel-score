@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import androidx.wear.compose.material.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlin.math.abs
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -47,6 +48,8 @@ import com.gonzalocamera.padelcounter.shared.subtractPointFromMy
 import com.gonzalocamera.padelcounter.shared.subtractPointFromOpp
 import com.gonzalocamera.padelcounter.shared.pointsLabel
 import com.gonzalocamera.padelcounter.shared.isStarPointDecider
+import com.gonzalocamera.padelcounter.shared.isGoldenPointDecider
+import com.gonzalocamera.padelcounter.shared.starPointAdvantageLevel
 import com.gonzalocamera.padelcounter.shared.isMatchFinished
 import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchOrigin
@@ -167,8 +170,25 @@ private fun PadelApp() {
     var previousState by remember { mutableStateOf<PadelState?>(null) }
     var matchSynced by remember { mutableStateOf(false) }
 
+    // Estado del vínculo con la app de teléfono (companion) + avisos de instalación.
+    var companionStatus by remember { mutableStateOf(CompanionStatus.UNKNOWN) }
+    var showCompanionPrompt by remember { mutableStateOf(false) }
+    var showMatchEndCompanionHint by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         syncSender.trySendPending()
+    }
+
+    // Aviso al arrancar (máx 3 veces): si hay teléfono sin la app, o no hay teléfono.
+    LaunchedEffect(hasSeenWalkthrough) {
+        if (!hasSeenWalkthrough) return@LaunchedEffect
+        val status = CompanionDetector.detect(context)
+        companionStatus = status
+        val shows = status == CompanionStatus.PHONE_NO_APP || status == CompanionStatus.NO_PHONE
+        if (shows && repo.startupCompanionPromptCount.first() < 3) {
+            repo.incrementStartupCompanionPromptCount()
+            showCompanionPrompt = true
+        }
     }
 
     // Contador de golpes: arranca el service cuando el partido está en juego y el feature está ON.
@@ -207,6 +227,14 @@ private fun PadelApp() {
             syncSender.trySendPending()
             StrokeCounter.reset()
             repo.clearStrokeBackup()
+            // Aviso companion al finalizar (máx 3): si no está la app de teléfono.
+            val status = CompanionDetector.detect(context)
+            companionStatus = status
+            val hint = status == CompanionStatus.PHONE_NO_APP || status == CompanionStatus.NO_PHONE
+            showMatchEndCompanionHint = if (hint && repo.matchEndCompanionPromptCount.first() < 3) {
+                repo.incrementMatchEndCompanionPromptCount()
+                true
+            } else false
             screen = Screen.MATCH_FINISHED
         }
     }
@@ -258,6 +286,7 @@ private fun PadelApp() {
                 onTestCounter = { screen = Screen.STROKE_TEST },
                 onNewMatch = { screen = Screen.NEW_MATCH },
                 onTutorial = { screen = Screen.TUTORIAL },
+                onInstallPhoneApp = { scope.launch { CompanionDetector.openInstallOnPhone(context) } },
                 onBack = { screen = Screen.COUNTER }
             )
         }
@@ -328,8 +357,11 @@ private fun PadelApp() {
         ) {
             MatchFinishedScreen(
                 state = state,
+                showCompanionHint = showMatchEndCompanionHint,
+                onInstallPhoneApp = { scope.launch { CompanionDetector.openInstallOnPhone(context) } },
                 onNewMatch = {
                     matchSynced = false
+                    showMatchEndCompanionHint = false
                     scope.launch {
                         repo.resetMatchWithConfig(
                             decider = state.decider,
@@ -341,6 +373,23 @@ private fun PadelApp() {
                     screen = Screen.COUNTER
                 },
                 onDismiss = { screen = Screen.COUNTER }
+            )
+        }
+
+        // Overlay de aviso "instalá la app de teléfono" al arrancar (solo sobre COUNTER).
+        AnimatedVisibility(
+            visible = showCompanionPrompt && screen == Screen.COUNTER,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            CompanionPromptScreen(
+                status = companionStatus,
+                onInstall = {
+                    scope.launch { CompanionDetector.openInstallOnPhone(context) }
+                    showCompanionPrompt = false
+                },
+                onDismiss = { showCompanionPrompt = false }
             )
         }
     }
@@ -447,10 +496,17 @@ internal fun CounterScreen(
                     )
                 }
 
-                // Indicador "SP": punto definitorio del game en modo Star Point
-                if (!needsServeSelection && isStarPointDecider(state)) {
+                // Indicador central del estado del game:
+                // Star Point → "DE1"/"DE2" en cada ventaja y "SP" en el punto definitorio;
+                // Punto de Oro → "PO" en el 40-40.
+                val deciderBadge = when {
+                    isStarPointDecider(state) -> "SP"
+                    isGoldenPointDecider(state) -> "PO"
+                    else -> starPointAdvantageLevel(state)?.let { "DE$it" }
+                }
+                if (!needsServeSelection && deciderBadge != null) {
                     Text(
-                        text = "SP",
+                        text = deciderBadge,
                         color = Color(0xFF1A0E00),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = metrics.smallSize * 0.72f,
@@ -763,6 +819,7 @@ private fun SettingsScreen(
     onTestCounter: () -> Unit,
     onNewMatch: () -> Unit,
     onTutorial: () -> Unit,
+    onInstallPhoneApp: () -> Unit,
     onBack: () -> Unit
 ) {
     val listState = rememberScalingLazyListState()
@@ -941,6 +998,11 @@ private fun SettingsScreen(
                 OutlinedButton(onClick = onTutorial, modifier = Modifier.fillMaxWidth()) { Text("Tutorial") }
             }
             item {
+                OutlinedButton(onClick = onInstallPhoneApp, modifier = Modifier.fillMaxWidth()) {
+                    Text("Instalar app en el teléfono")
+                }
+            }
+            item {
                 OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
             }
             item {
@@ -992,6 +1054,10 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
         WalkthroughStep(
             title = "Contador de golpes",
             description = "Contamos tus golpes en el partido.\nUsá el reloj en la muñeca\nde la paleta"
+        ),
+        WalkthroughStep(
+            title = "También en tu teléfono",
+            description = "Instalá la app en el celu\npara guardar tu historial\ny ver estadísticas"
         ),
         WalkthroughStep(
             title = "¡Listo!",
@@ -1246,44 +1312,136 @@ private fun NewMatchScreen(
 @Composable
 private fun MatchFinishedScreen(
     state: PadelState,
+    showCompanionHint: Boolean,
+    onInstallPhoneApp: () -> Unit,
     onNewMatch: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val winnerText = if (state.mySets > state.oppSets) "Ganaste!" else "Perdiste"
 
-    Scaffold(timeText = { TimeText() }) {
-        Column(
+    Scaffold(
+        timeText = { TimeText() },
+        positionIndicator = { }
+    ) {
+        ScalingLazyColumn(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 26.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically)
         ) {
-            Text(
-                text = winnerText,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = Color.White
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Sets: ${state.mySets} - ${state.oppSets}",
-                fontSize = 14.sp,
-                color = Color.White.copy(alpha = 0.8f)
-            )
-            if (state.setsHistory.isNotEmpty()) {
-                Spacer(Modifier.height(2.dp))
+            item {
                 Text(
-                    text = state.setsHistory.joinToString("  ") { "${it[0]}-${it[1]}" },
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.6f)
+                    text = winnerText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color.White
                 )
             }
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = onNewMatch, modifier = Modifier.fillMaxWidth(0.7f)) {
-                Text("Nuevo partido")
+            item {
+                Text(
+                    text = "Sets: ${state.mySets} - ${state.oppSets}",
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
             }
-            Spacer(Modifier.height(6.dp))
-            OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth(0.7f)) {
-                Text("Seguir viendo")
+            if (state.setsHistory.isNotEmpty()) {
+                item {
+                    Text(
+                        text = state.setsHistory.joinToString("  ") { "${it[0]}-${it[1]}" },
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+                }
+            }
+            if (showCompanionHint) {
+                item {
+                    Text(
+                        text = "¿Querés guardar el historial de tus partidos? Instalá la app en tu teléfono.",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.75f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                    )
+                }
+                item {
+                    OutlinedButton(onClick = onInstallPhoneApp, modifier = Modifier.fillMaxWidth(0.85f)) {
+                        Text("Instalar en el teléfono", fontSize = 13.sp)
+                    }
+                }
+            }
+            item {
+                Button(onClick = onNewMatch, modifier = Modifier.fillMaxWidth(0.7f)) {
+                    Text("Nuevo partido")
+                }
+            }
+            item {
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth(0.7f)) {
+                    Text("Seguir viendo")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompanionPromptScreen(
+    status: CompanionStatus,
+    onInstall: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val hasPhone = status == CompanionStatus.PHONE_NO_APP
+    val message = if (hasPhone) {
+        "Guardá tu historial y estadísticas instalando Simple Padel Score en tu teléfono."
+    } else {
+        "Vinculá tu reloj a un teléfono con Simple Padel Score para guardar tu historial y estadísticas."
+    }
+
+    Scaffold(
+        timeText = { TimeText() },
+        positionIndicator = { }
+    ) {
+        ScalingLazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 26.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)
+        ) {
+            item {
+                Text(
+                    text = "También en tu teléfono",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            item {
+                Text(
+                    text = message,
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.75f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp)
+                )
+            }
+            if (hasPhone) {
+                item {
+                    Button(onClick = onInstall, modifier = Modifier.fillMaxWidth(0.85f)) {
+                        Text("Instalar en el teléfono", fontSize = 13.sp)
+                    }
+                }
+            }
+            item {
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth(0.85f)) {
+                    Text(if (hasPhone) "Ahora no" else "Entendido", fontSize = 13.sp)
+                }
             }
         }
     }

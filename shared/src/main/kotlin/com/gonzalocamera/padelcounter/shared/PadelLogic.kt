@@ -37,6 +37,28 @@ fun isStarPointDecider(state: PadelState): Boolean =
         state.oppPointsIdx == 3 &&
         state.deuceCount >= 2
 
+/** True cuando el siguiente punto define el game en modo Punto de Oro
+ *  (40-40: el próximo punto cierra el game). */
+fun isGoldenPointDecider(state: PadelState): Boolean =
+    state.scoringMode == ScoringMode.GOLDEN_POINT &&
+        !state.inTieBreak &&
+        state.myPointsIdx == 3 &&
+        state.oppPointsIdx == 3
+
+/** En modo Star Point, número de ventaja en curso: 1 = primera (DE1),
+ *  2 = segunda (DE2), o null si no hay una ventaja activa. Al agotarse ambas
+ *  ventajas (deuceCount >= 2), el 40-40 pasa a ser Star Point (ver [isStarPointDecider]). */
+fun starPointAdvantageLevel(state: PadelState): Int? {
+    if (state.scoringMode != ScoringMode.STAR_POINT || state.inTieBreak) return null
+    val inAdvantage = state.myPointsIdx == 4 || state.oppPointsIdx == 4
+    if (!inAdvantage) return null
+    return when (state.deuceCount) {
+        0 -> 1
+        1 -> 2
+        else -> null
+    }
+}
+
 fun addPointToMy(state: PadelState): PadelState =
     if (state.inTieBreak) addTbPoint(state, me = true) else addNormalPoint(state, me = true)
 

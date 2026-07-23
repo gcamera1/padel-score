@@ -35,8 +35,11 @@ import kotlinx.coroutines.flow.first
 import kotlin.math.abs
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.painterResource
 import com.gonzalocamera.padelcounter.R
+import com.gonzalocamera.padelcounter.presentation.theme.PadelCounterTheme
+import com.gonzalocamera.padelcounter.presentation.theme.WearBrand
 import com.gonzalocamera.padelcounter.shared.CourtColorOption
 import com.gonzalocamera.padelcounter.shared.Decider
 import com.gonzalocamera.padelcounter.shared.PadelState
@@ -143,7 +146,7 @@ internal fun rememberScreenMetrics(): ScreenMetrics {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MaterialTheme { PadelApp() } }
+        setContent { PadelCounterTheme { PadelApp() } }
     }
 }
 
@@ -359,7 +362,7 @@ private fun PadelApp() {
                 state = state,
                 showCompanionHint = showMatchEndCompanionHint,
                 onInstallPhoneApp = { scope.launch { CompanionDetector.openInstallOnPhone(context) } },
-                onNewMatch = {
+                onPlayAgain = {
                     matchSynced = false
                     showMatchEndCompanionHint = false
                     scope.launch {
@@ -372,7 +375,11 @@ private fun PadelApp() {
                     }
                     screen = Screen.COUNTER
                 },
-                onDismiss = { screen = Screen.COUNTER }
+                onNewMatch = {
+                    matchSynced = false
+                    showMatchEndCompanionHint = false
+                    screen = Screen.NEW_MATCH
+                }
             )
         }
 
@@ -507,13 +514,13 @@ internal fun CounterScreen(
                 if (!needsServeSelection && deciderBadge != null) {
                     Text(
                         text = deciderBadge,
-                        color = Color(0xFF1A0E00),
-                        fontWeight = FontWeight.SemiBold,
+                        color = WearBrand.OnGold,
+                        fontWeight = FontWeight.Bold,
                         fontSize = metrics.smallSize * 0.72f,
                         modifier = Modifier
                             .align(Alignment.Center)
                             .clip(RoundedCornerShape(999.dp))
-                            .background(Color(0xFFC9A46C).copy(alpha = 0.92f))
+                            .background(WearBrand.Gold)
                             .padding(horizontal = 4.dp, vertical = 1.dp)
                     )
                 }
@@ -639,7 +646,7 @@ private fun SwipeToSettingsHint(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.85f))
+            .background(WearBrand.Gold.copy(alpha = 0.92f))
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -654,7 +661,7 @@ private fun SwipeToSettingsHint(
                     modifier = Modifier
                         .size(3.5.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(Color.Black.copy(alpha = 0.75f))
+                        .background(WearBrand.OnGold.copy(alpha = 0.85f))
                 )
             }
         }
@@ -662,7 +669,7 @@ private fun SwipeToSettingsHint(
         // Chevron hacia la izquierda (swipe hacia la izquierda para abrir)
         Text(
             text = "‹",
-            color = Color.Black.copy(alpha = 0.80f),
+            color = WearBrand.OnGold.copy(alpha = 0.9f),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
         )
@@ -852,7 +859,7 @@ private fun SettingsScreen(
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item { Text("Ajustes", fontWeight = FontWeight.Bold) }
+            item { Text("Ajustes", fontWeight = FontWeight.Bold, color = WearBrand.Gold) }
 
             item {
                 Button(onClick = onNewMatch, modifier = Modifier.fillMaxWidth()) { Text("Nuevo partido…") }
@@ -940,6 +947,7 @@ private fun SettingsScreen(
                                     Text(lbl)
                                 }
                             },
+                            colors = ChipDefaults.secondaryChipColors(),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -949,12 +957,12 @@ private fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         choices.indices.forEach { i ->
-                            val alpha = if (i == currentIdx) 0.95f else 0.35f
+                            val active = i == currentIdx
                             Box(
                                 modifier = Modifier
-                                    .size(if (i == currentIdx) 6.dp else 5.dp)
+                                    .size(if (active) 6.dp else 5.dp)
                                     .clip(RoundedCornerShape(50))
-                                    .background(Color.White.copy(alpha = alpha))
+                                    .background(if (active) WearBrand.Gold else WearBrand.TextFaint.copy(alpha = 0.5f))
                             )
                         }
                     }
@@ -999,7 +1007,11 @@ private fun SettingsScreen(
             }
             item {
                 OutlinedButton(onClick = onInstallPhoneApp, modifier = Modifier.fillMaxWidth()) {
-                    Text("Instalar app en el teléfono")
+                    Text(
+                        "Instalar app en el teléfono",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
             item {
@@ -1009,7 +1021,7 @@ private fun SettingsScreen(
                 Text(
                     text = "v1.0.0",
                     fontSize = 10.sp,
-                    color = Color.White.copy(alpha = 0.35f),
+                    color = WearBrand.Gold.copy(alpha = 0.5f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1104,7 +1116,7 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
                         text = s.title,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = Color.White,
+                        color = WearBrand.Gold,
                         textAlign = TextAlign.Center
                     )
 
@@ -1141,8 +1153,8 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
                                     .size(if (i == currentStep) 6.dp else 4.dp)
                                     .clip(RoundedCornerShape(50))
                                     .background(
-                                        if (i == currentStep) Color.White
-                                        else Color.White.copy(alpha = 0.35f)
+                                        if (i == currentStep) WearBrand.Gold
+                                        else WearBrand.TextFaint.copy(alpha = 0.5f)
                                     )
                             )
                         }
@@ -1196,7 +1208,7 @@ private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            item { Text("Tutorial", fontWeight = FontWeight.Bold) }
+            item { Text("Tutorial", fontWeight = FontWeight.Bold, color = WearBrand.Gold) }
 
             item { Text("1. Al iniciar, tocá arriba o abajo para elegir quién saca.", fontSize = 12.sp) }
             item { Text("2. Un toque suma un punto al lado tocado (arriba = rival, abajo = vos).", fontSize = 12.sp) }
@@ -1241,62 +1253,97 @@ private fun NewMatchScreen(
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item { Text("Nuevo partido", fontWeight = FontWeight.Bold) }
-
-            item { Text("Sets") }
-            listOf(1, 3, 5).forEach { option ->
-                item {
-                    Chip(
-                        onClick = { bestOf = option },
-                        label = {
-                            Text(when (option) {
-                                1 -> "Al mejor de 1 set"
-                                3 -> "Al mejor de 3 sets"
-                                else -> "Al mejor de 5 sets"
-                            })
-                        },
-                        secondaryLabel = { Text(if (bestOf == option) "Seleccionado" else "") }
-                    )
-                }
-            }
-
-            item { Text("Desempate del partido") }
-            item {
-                Chip(
-                    onClick = { decider = Decider.TB7 },
-                    label = { Text("Tie-break (a 7)") },
-                    secondaryLabel = { Text(if (decider == Decider.TB7) "Seleccionado" else "") }
-                )
-            }
-            item {
-                Chip(
-                    onClick = { decider = Decider.SUPER10 },
-                    label = { Text("Super Tie-break (a 10)") },
-                    secondaryLabel = { Text(if (decider == Decider.SUPER10) "Seleccionado" else "") }
-                )
-            }
+            item { Text("Nuevo partido", fontWeight = FontWeight.Bold, color = WearBrand.Gold) }
 
             item { Text("Modo de juego") }
             item {
                 Chip(
                     onClick = { scoringMode = ScoringMode.DEUCE },
-                    label = { Text("Deuce/Ventaja") },
-                    secondaryLabel = { Text(if (scoringMode == ScoringMode.DEUCE) "Seleccionado" else "") }
+                    label = { Text("Deuce/Ventaja", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                    secondaryLabel = { Text(if (scoringMode == ScoringMode.DEUCE) "Seleccionado" else "", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                    colors = if (scoringMode == ScoringMode.DEUCE) ChipDefaults.primaryChipColors()
+                             else ChipDefaults.secondaryChipColors()
                 )
             }
             item {
                 Chip(
                     onClick = { scoringMode = ScoringMode.GOLDEN_POINT },
-                    label = { Text("Punto de Oro") },
-                    secondaryLabel = { Text(if (scoringMode == ScoringMode.GOLDEN_POINT) "Seleccionado" else "") }
+                    label = { Text("Punto de Oro", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                    secondaryLabel = { Text(if (scoringMode == ScoringMode.GOLDEN_POINT) "Seleccionado" else "", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                    colors = if (scoringMode == ScoringMode.GOLDEN_POINT) ChipDefaults.primaryChipColors()
+                             else ChipDefaults.secondaryChipColors()
                 )
             }
             item {
                 Chip(
                     onClick = { scoringMode = ScoringMode.STAR_POINT },
-                    label = { Text("Star Point") },
-                    secondaryLabel = { Text(if (scoringMode == ScoringMode.STAR_POINT) "Seleccionado" else "") }
+                    label = { Text("Star Point", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                    secondaryLabel = { Text(if (scoringMode == ScoringMode.STAR_POINT) "Seleccionado" else "", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                    colors = if (scoringMode == ScoringMode.STAR_POINT) ChipDefaults.primaryChipColors()
+                             else ChipDefaults.secondaryChipColors()
                 )
+            }
+
+            item { Text("Sets (al mejor de)") }
+            item {
+                val haptic = LocalHapticFeedback.current
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(1, 3, 5).forEach { option ->
+                        val selected = bestOf == option
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (selected) WearBrand.Gold else WearBrand.Card)
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    bestOf = option
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = option.toString(),
+                                color = if (selected) WearBrand.OnGold else WearBrand.Text,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+
+            item { Text("Tie break (a)") }
+            item {
+                val haptic = LocalHapticFeedback.current
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(Decider.TB7 to "7", Decider.SUPER10 to "10").forEach { (option, label) ->
+                        val selected = decider == option
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (selected) WearBrand.Gold else WearBrand.Card)
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    decider = option
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (selected) WearBrand.OnGold else WearBrand.Text,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
+                    }
+                }
             }
 
             item {
@@ -1314,10 +1361,11 @@ private fun MatchFinishedScreen(
     state: PadelState,
     showCompanionHint: Boolean,
     onInstallPhoneApp: () -> Unit,
-    onNewMatch: () -> Unit,
-    onDismiss: () -> Unit
+    onPlayAgain: () -> Unit,
+    onNewMatch: () -> Unit
 ) {
-    val winnerText = if (state.mySets > state.oppSets) "Ganaste!" else "Perdiste"
+    val won = state.mySets > state.oppSets
+    val winnerText = if (won) "Ganaste!" else "Perdiste"
 
     Scaffold(
         timeText = { TimeText() },
@@ -1334,7 +1382,7 @@ private fun MatchFinishedScreen(
                     text = winnerText,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = Color.White
+                    color = if (won) WearBrand.GoldLight else WearBrand.Text
                 )
             }
             item {
@@ -1372,14 +1420,22 @@ private fun MatchFinishedScreen(
                 }
             }
             item {
-                Button(onClick = onNewMatch, modifier = Modifier.fillMaxWidth(0.7f)) {
-                    Text("Nuevo partido")
-                }
+                Chip(
+                    onClick = onPlayAgain,
+                    label = { Text("Jugar de nuevo", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                    secondaryLabel = { Text("Misma configuración", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                    colors = ChipDefaults.primaryChipColors(),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
             item {
-                OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth(0.7f)) {
-                    Text("Seguir viendo")
-                }
+                Chip(
+                    onClick = onNewMatch,
+                    label = { Text("Nuevo partido", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                    secondaryLabel = { Text("Cambiar opciones", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                    colors = ChipDefaults.secondaryChipColors(),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
@@ -1415,7 +1471,7 @@ private fun CompanionPromptScreen(
                     text = "También en tu teléfono",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    color = Color.White,
+                    color = WearBrand.Gold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1512,6 +1568,7 @@ private fun SensitivitySelector(
                         Text(lbl)
                     }
                 },
+                colors = ChipDefaults.secondaryChipColors(),
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -1521,12 +1578,12 @@ private fun SensitivitySelector(
             verticalAlignment = Alignment.CenterVertically
         ) {
             choices.indices.forEach { i ->
-                val alpha = if (i == currentIdx) 0.95f else 0.35f
+                val active = i == currentIdx
                 Box(
                     modifier = Modifier
-                        .size(if (i == currentIdx) 6.dp else 5.dp)
+                        .size(if (active) 6.dp else 5.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = alpha))
+                        .background(if (active) WearBrand.Gold else WearBrand.TextFaint.copy(alpha = 0.5f))
                 )
             }
         }

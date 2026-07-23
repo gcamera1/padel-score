@@ -41,7 +41,7 @@ class CounterScreenshot_PixelWatch_StarPoint {
 
     @Test fun starPointDecider() {
         paparazzi.snapshot {
-            androidx.wear.compose.material.MaterialTheme {
+            com.gonzalocamera.padelcounter.presentation.theme.PadelCounterTheme {
                 CounterScreen(
                     state = STARPOINT_DECIDER_STATE,
                     onSave = {},

@@ -80,8 +80,13 @@ wear:   34 · 010 · 00 · 03  ->  340100003
 
 - Cada AAB que subís a Play debe tener un versionCode **mayor** al de la última release
   publicada de **ese mismo track**. Subir el reloj no obliga a tocar el del teléfono.
-- El reloj se queda en `targetSdk 34` a propósito: el requisito de API 36 de agosto 2026
-  **exceptúa Wear OS**, que pide API 34+ (WO-P1).
+- **El reloj debe pasar a `targetSdk 35` antes del 31 de agosto de 2026.** Play lo dice
+  textual en el panel: *"La aplicación para Wear OS debe estar orientada a Android 15 (nivel
+  35 de la API) o a una versión posterior"*. Wear OS queda exceptuado del requisito general
+  de API 36, pero no del 35. Después de esa fecha no se pueden publicar actualizaciones del
+  artefacto de reloj con API 34.
+  El umbral de API 34 que figura en la guía de calidad como WO-P1 es el que rigió desde
+  agosto de **2025** — quedó viejo, la consola es la fuente autoritativa.
 
 ## 4. Generar AABs Firmados
 
@@ -172,7 +177,7 @@ Los que aplican a esta app, de la
 
 | ID | Requisito | Estado |
 |----|-----------|--------|
-| WO-P1 | targetSdk 34+ | ✅ `targetSdk = 34` |
+| WO-P1 | targetSdk | ⚠️ `targetSdk = 34` — válido para publicar **hasta el 31/08/2026**; después Play exige 35 (ver §3) |
 | WO-P2 | No crashea al instalar/abrir | verificar en reloj real |
 | WO-P5 | La app non-standalone conecta con el companion | ✅ `CompanionDetector` |
 | WO-V3 | Swipe para cerrar funciona | verificar (el marcador usa swipe-left para ajustes) |

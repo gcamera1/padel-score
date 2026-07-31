@@ -14,17 +14,16 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
 
-    <!-- Solo pantallas de reloj — evita que Play lo trate como app de teléfono -->
-    <supports-screens
-        android:smallScreens="true"
-        android:normalScreens="false"
-        android:largeScreens="false"
-        android:xlargeScreens="false" />
+    <!--
+      El targeting a relojes lo hace `uses-feature android.hardware.type.watch` (arriba).
+      NO agregar <supports-screens>: esos buckets legacy los usa Play para filtrar
+      dispositivos y pueden excluir relojes de pantalla grande.
+    -->
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="Simple Padel Score"
+        android:label="@string/app_name"
         android:supportsRtl="true">
 
         <!-- Companion mode (requires phone) -->

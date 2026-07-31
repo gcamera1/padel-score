@@ -1,4 +1,21 @@
-# Guía de Publicación — Padel Score
+# Guía de Publicación — Simple Padel Score
+
+Un único listing en Google Play (`com.gonzalocamera.padelcounter`) con **dos artefactos**:
+el del teléfono y el del reloj. Cada form factor se publica en su propio track.
+
+## Estado actual
+
+| Artefacto | versionCode | versionName | Estado |
+|-----------|-------------|-------------|--------|
+| mobile | 350100000 | 1.0.0 | **Producción**, 177 países |
+| wear | 340100003 | 1.0.0 | Pendiente de subir |
+
+El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
+repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos
+artefactos comparten `applicationId`, Play los trata como un solo listing con varios form
+factors. Lo que sí falta para el reloj es el **opt-in al form factor Wear OS** y la
+**revisión manual** de Google contra las
+[Wear OS app quality guidelines](https://developer.android.com/docs/quality-guidelines/wear-app-quality).
 
 ## 1. Generar Keystore de Release
 
@@ -16,6 +33,15 @@ keytool -genkey -v \
 
 Guardá el archivo `.jks` en un lugar seguro fuera del repositorio.
 
+**Ambos artefactos se firman con la misma key** — es requisito de Play para la relación
+companion (WO-G7). Para verificarlo:
+
+```bash
+keytool -printcert -jarfile release-artifacts/padel-wear-v1.0.0-vc340100003.aab | grep SHA256
+keytool -printcert -jarfile release-artifacts/padel-mobile-v1.0.0-vc350100000.aab | grep SHA256
+# Los dos SHA256 deben ser idénticos.
+```
+
 ## 2. Configurar Propiedades de Firma
 
 En `~/.gradle/gradle.properties` (NO en el repo), agregá:
@@ -27,114 +53,146 @@ PADEL_KEY_ALIAS=padel-score
 PADEL_KEY_PASSWORD=tu_key_password
 ```
 
-Si estas propiedades no están presentes, el build generará AABs sin firmar y mostrará un warning.
+Si estas propiedades no están presentes, el build genera AABs **sin firmar** y muestra un
+warning.
 
-## 3. Incrementar Versión
+## 3. Versionado
 
-Antes de cada release, editá `gradle.properties` en la raíz del proyecto:
+`versionName` es compartido; el `versionCode` es **por módulo** — Play exige un versionCode
+distinto por form factor y recomienda que el del teléfono sea el más alto.
+
+En `gradle.properties` de la raíz:
 
 ```properties
-PADEL_VERSION_CODE=6        # Incrementar en 1 por cada release
-PADEL_VERSION_NAME=1.1.0    # Seguir semver
+PADEL_MOBILE_VERSION_CODE=350100000
+PADEL_WEAR_VERSION_CODE=340100003
+PADEL_VERSION_NAME=1.0.0
 ```
 
-Ambos módulos (`:mobile` y `:wear`) leen estos valores automáticamente. El build falla si difieren.
+Esquema de 9 dígitos: `[targetSdk 2][versión comercial 3][build 2][form factor 2]`
+
+```
+mobile: 35 · 010 · 00 · 00  ->  350100000
+wear:   34 · 010 · 00 · 03  ->  340100003
+```
+
+**Reglas al versionar:**
+
+- Cada AAB que subís a Play debe tener un versionCode **mayor** al de la última release
+  publicada de **ese mismo track**. Subir el reloj no obliga a tocar el del teléfono.
+- El reloj se queda en `targetSdk 34` a propósito: el requisito de API 36 de agosto 2026
+  **exceptúa Wear OS**, que pide API 34+ (WO-P1).
 
 ## 4. Generar AABs Firmados
 
 ```bash
-# AAB del módulo mobile (teléfono)
-./gradlew :mobile:bundleRelease
-
-# AAB del módulo wear (reloj)
-./gradlew :wear:bundleRelease
+./gradlew :wear:bundleRelease       # -> wear/build/outputs/bundle/release/wear-release.aab
+./gradlew :mobile:bundleRelease     # -> mobile/build/outputs/bundle/release/mobile-release.aab
 ```
 
-Los archivos resultantes están en:
-- `mobile/build/outputs/bundle/release/mobile-release.aab`
-- `wear/build/outputs/bundle/release/wear-release.aab`
-
-Para generar ambos en un solo comando:
+Archivá el resultado en `release-artifacts/` con el nombre versionado (el directorio está
+gitignorado):
 
 ```bash
-./gradlew :mobile:bundleRelease :wear:bundleRelease
+cp wear/build/outputs/bundle/release/wear-release.aab \
+   release-artifacts/padel-wear-v1.0.0-vc340100003.aab
 ```
 
-## 5. Crear Listing en Google Play Console
+Verificá el contenido antes de subir:
 
-### 5.1 Listing Único
+```bash
+bundletool dump manifest --bundle wear/build/outputs/bundle/release/wear-release.aab
+```
 
-1. Ir a [Google Play Console](https://play.google.com/console)
-2. Crear una nueva app con el nombre **"Padel Score"**
-3. El `applicationId` de ambos artefactos es `com.gonzalocamera.padelcounter`
+Chequeá que salga `versionCode`, `minSdkVersion="30"`, `targetSdkVersion="34"`,
+`uses-feature android.hardware.type.watch` y `standalone = false`.
 
-### 5.2 Subir Artefacto Mobile (Teléfono)
+## 5. Capturas de la ficha (Wear OS)
 
-1. Ir a **Release > Production** (o el track correspondiente)
-2. Crear nueva release
-3. Subir `mobile-release.aab`
-4. Este artefacto se distribuye a dispositivos de teléfono
+```bash
+./scripts/wear-store-screenshots.sh
+```
 
-### 5.3 Subir Artefacto Wear OS
+Graba los snapshots de Paparazzi y los deja aplanados en
+`release-artifacts/store-assets/wear/` (PNG 900x900, sin alfa).
 
-1. Ir a **Release > Wear OS**
-2. Crear nueva release
-3. Subir `wear-release.aab`
-4. Este artefacto se distribuye exclusivamente a relojes Wear OS
+**Por qué no se suben los PNG de Paparazzi directamente:** salen con las esquinas
+transparentes por el recorte de pantalla redonda, y Play rechaza capturas con canal alfa
+(WO-G5: 1:1, sin marcos de dispositivo, sin fondo transparente). El script las aplana sobre
+negro, que además es el fondo que pide WO-V13.
 
-### 5.4 Declarar Companion
+## 6. Agregar el form factor Wear OS en Play Console
 
-La relación companion se establece automáticamente porque:
-- Ambos artefactos comparten el mismo `applicationId` (`com.gonzalocamera.padelcounter`)
-- El artefacto wear declara `com.google.android.wearable.standalone = false` en su AndroidManifest
-- El artefacto mobile declara `<uses-feature android:name="android.hardware.type.watch" android:required="false" />`
+La relación companion sale automáticamente de tres cosas que ya están en el código:
 
-Google Play Console reconoce esta relación al subir ambos artefactos al mismo listing.
+- Ambos artefactos comparten `applicationId` y **la misma key de firma**
+- El manifest de `:wear` declara `com.google.android.wearable.standalone = false`
+- El manifest de `:wear` declara `<uses-feature android:name="android.hardware.type.watch" />`
 
-## 6. Internal Testing
+> **No agregar `android:required="false"` a ese `uses-feature`, ni declararlo en el manifest
+> de `:mobile`.** La [doc oficial lo prohíbe](https://developer.android.com/training/wearables/packaging):
+> resulta en un único APK para teléfono y reloj, que no es una configuración soportada. El
+> manifest del teléfono simplemente no menciona el feature.
+>
+> Tampoco agregar `<supports-screens>` al manifest del reloj: esos buckets legacy los usa
+> Play para filtrar dispositivos y pueden excluir relojes de pantalla grande. El targeting a
+> relojes lo hace `uses-feature android.hardware.type.watch`.
 
-### Requisitos de la Política de Wear OS
+Pasos en la consola:
 
-Antes de promover a producción, la política de Google Play exige:
-- **12 testers reales** como mínimo
-- **14 días corridos** de testing activo en el track Internal Testing
+1. **Test and release → Advanced settings → pestaña Form factors → + Add form factor → Wear OS**
+2. Subir las capturas de Wear OS a la ficha (las de `release-artifacts/store-assets/wear/`)
+3. Subir el AAB del reloj a un **track de testing** (paso obligatorio del flujo; no hay
+   espera de días, el requisito de testers ya está cumplido)
+4. Volver a **Advanced settings** → **"Opt in to Wear OS and agree to the review policy"**
+5. **Production** → selector de form factor arriba a la derecha → **"Wear OS only"** →
+   **Create new release** → subir el AAB
+6. Esperar la revisión de Google contra las Wear OS app quality guidelines
 
-### Procedimiento
+## 7. Declaración de foreground service
 
-1. Ir a **Testing > Internal testing**
-2. Crear nueva release y subir ambos AABs (mobile y wear)
-3. Crear una lista de testers con al menos 12 emails de cuentas Google
-4. Enviar el link de opt-in a los testers
-5. Los testers deben:
-   - Aceptar la invitación desde el link
-   - Instalar la app desde Google Play
-   - Usarla al menos una vez
-6. Esperar 14 días corridos desde que el primer tester se unió
-7. Verificar en la consola que hay 12+ testers activos
+El artefacto del reloj declara permisos que el del teléfono no tenía, por el contador de
+golpes:
 
-### Ventaja de la App Companion
+| Permiso | Para qué |
+|---------|----------|
+| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_HEALTH` | `StrokeCounterService` (`foregroundServiceType="health"`) muestrea el acelerómetro durante el partido |
+| `HIGH_SAMPLING_RATE_SENSORS` | frecuencia de muestreo necesaria para detectar picos de golpe |
+| `POST_NOTIFICATIONS` | notificación del foreground service |
 
-Con la app mobile como companion, los testers pueden participar del internal testing **instalando solo la app de teléfono**, sin necesidad de tener un reloj Wear OS. Esto simplifica enormemente alcanzar los 12 testers.
+Play exige completar **App content → Foreground service permissions** con una justificación
+y un **video demostrativo** del uso. Es la causa de rechazo más común en este escenario, así
+que conviene tenerlo listo antes de mandar a revisión: un clip mostrando que el contador se
+inicia al empezar un partido y se detiene al terminarlo.
 
-## 7. Promover a Producción
+## 8. Requisitos de calidad relevantes
 
-Una vez cumplidos los 14 días con 12+ testers:
+Los que aplican a esta app, de la
+[lista completa](https://developer.android.com/docs/quality-guidelines/wear-app-quality):
 
-1. Ir a **Release > Production**
-2. Promover la release de internal testing a producción
-3. Completar la ficha de la tienda (capturas, descripción, etc.)
-4. Enviar para revisión
+| ID | Requisito | Estado |
+|----|-----------|--------|
+| WO-P1 | targetSdk 34+ | ✅ `targetSdk = 34` |
+| WO-P2 | No crashea al instalar/abrir | verificar en reloj real |
+| WO-P5 | La app non-standalone conecta con el companion | ✅ `CompanionDetector` |
+| WO-V3 | Swipe para cerrar funciona | verificar (el marcador usa swipe-left para ajustes) |
+| WO-V13 | Fondo negro | ✅ tema negro-oro |
+| WO-V14 | Mínimo 12sp en texto esencial | ✅ |
+| WO-V16 | Contenido dentro del display, círculo de 192dp mínimo | ✅ `ScreenMetrics` (`fw² + fh² ≤ 1.0`); los screenshot tests cubren 225dp y 198dp |
+| WO-G5 | Capturas 1:1, sin marco, sin alfa | ✅ vía `scripts/wear-store-screenshots.sh` |
+| WO-G7 | Mismo package y misma key que el companion | ✅ verificado con `keytool` |
+| — | Soporte 64-bit (obligatorio 15/09/2026) | ✅ `arm64-v8a` presente |
 
-## 8. Checklist Pre-Upload
-
-Antes de subir cada release, verificar:
+## 9. Checklist Pre-Upload
 
 - [ ] `applicationId` es `com.gonzalocamera.padelcounter` en ambos módulos
-- [ ] `versionCode` es idéntico en `gradle.properties` (`PADEL_VERSION_CODE`)
-- [ ] `versionName` es idéntico en `gradle.properties` (`PADEL_VERSION_NAME`)
-- [ ] El manifest de `:wear` tiene `com.google.android.wearable.standalone = false`
-- [ ] El manifest de `:mobile` tiene `<uses-feature android:name="android.hardware.type.watch" android:required="false" />`
-- [ ] Ambos AABs están firmados con la misma key
-- [ ] `./gradlew :shared:test` pasa todos los tests
-- [ ] `./gradlew :mobile:compileDebugKotlin :wear:compileDebugKotlin` compila sin errores
-- [ ] Se incrementó el `versionCode` respecto de la última release publicada
+- [ ] `PADEL_WEAR_VERSION_CODE` ≠ `PADEL_MOBILE_VERSION_CODE`, y mayor al último publicado de su propio track
+- [ ] `PADEL_VERSION_NAME` coincide en ambos módulos (el build lo verifica con `checkVersionConsistency`)
+- [ ] El manifest de `:wear` tiene `standalone = false` y `uses-feature android.hardware.type.watch` **sin** `required="false"`
+- [ ] El manifest de `:wear` **no** tiene `<supports-screens>`
+- [ ] El manifest de `:mobile` **no** menciona `android.hardware.type.watch`
+- [ ] Ambos AABs firmados con la misma key (`keytool -printcert -jarfile`, comparar SHA256)
+- [ ] `./gradlew :shared:test :wear:test :mobile:test` pasa
+- [ ] `./gradlew :wear:verifyPaparazziDebug` pasa (sin diffs visuales inesperados)
+- [ ] Capturas de Wear OS generadas y sin alfa
+- [ ] Declaración de foreground service completa en Play Console

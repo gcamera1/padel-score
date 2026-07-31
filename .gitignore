@@ -21,10 +21,11 @@ app/src/test/snapshots/
 .cxx
 local.properties
 .idea/
-.claude/mwdd-state.json
-.claude/paused/
 .claude/settings.local.json
 .claude/skills/
 .claude/worktrees/
 # Store publishing artifacts (AABs + generated store assets, local only)
 release-artifacts/
+.mdd/
+# Knowledge graph generado por graphify (se reconstruye con `graphify update .`)
+graphify-out/

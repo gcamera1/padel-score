@@ -4,17 +4,24 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.AnimatedPane
@@ -62,6 +69,8 @@ fun HistoryScreen(
     val navigator = rememberListDetailPaneScaffoldNavigator<Any>()
     val scope = rememberCoroutineScope()
     var selectedMatchId by remember { mutableStateOf<String?>(null) }
+    var showManualSheet by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     BackHandler(enabled = navigator.canNavigateBack()) {
         scope.launch {
@@ -70,22 +79,50 @@ fun HistoryScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                HistoryUiEvent.ManualMatchSaved ->
+                    snackbarHostState.showSnackbar("Partido guardado")
+                is HistoryUiEvent.ShowError ->
+                    snackbarHostState.showSnackbar(event.message)
+            }
+        }
+    }
+
     NavigableListDetailPaneScaffold(
         navigator = navigator,
         listPane = {
             AnimatedPane {
-                HistoryScreenContent(
-                    matches = matches,
-                    totalMatches = aggregate.totalMatches,
-                    winPct = aggregate.winPct,
-                    onMatchClick = { matchId ->
-                        selectedMatchId = matchId
-                        scope.launch {
-                            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
-                        }
-                    },
-                    onPlayMatch = onPlayMatch,
-                )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    HistoryScreenContent(
+                        matches = matches,
+                        totalMatches = aggregate.totalMatches,
+                        winPct = aggregate.winPct,
+                        onMatchClick = { matchId ->
+                            selectedMatchId = matchId
+                            scope.launch {
+                                navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
+                            }
+                        },
+                        onPlayMatch = onPlayMatch,
+                        onAddManualMatch = { showManualSheet = true },
+                    )
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 88.dp),
+                    ) { data ->
+                        // El default de M3 es un panel claro que rompe el negro-oro.
+                        Snackbar(
+                            snackbarData = data,
+                            containerColor = PadelPalette.Gray,
+                            contentColor = PadelPalette.Text,
+                            shape = MaterialTheme.shapes.medium,
+                        )
+                    }
+                }
             }
         },
         detailPane = {
@@ -117,6 +154,17 @@ fun HistoryScreen(
         },
     )
 
+    // Fuera del scaffold: el sheet vive en su propia ventana y no debe quedar dentro
+    // de un AnimatedPane que puede desmontarse durante una transición de panel.
+    if (showManualSheet) {
+        ManualMatchSheet(
+            onDismiss = { showManualSheet = false },
+            onConfirm = { draft ->
+                viewModel.saveManualMatch(draft)
+                showManualSheet = false
+            },
+        )
+    }
 }
 
 @Composable
@@ -177,7 +225,6 @@ private fun InlineMatchDetailPane(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun HistoryScreenContent(
     matches: List<MatchSummary>,
@@ -185,28 +232,60 @@ internal fun HistoryScreenContent(
     winPct: Int,
     onMatchClick: (String) -> Unit,
     onPlayMatch: () -> Unit,
+    onAddManualMatch: () -> Unit,
 ) {
-    if (matches.isEmpty()) {
-        EmptyState(
-            title = "Aún no jugaste ningún partido",
-            subtitle = "Arrancá uno y te lo guardo acá.",
-            ctaLabel = "Jugar un partido",
-            onCta = onPlayMatch,
-            decoration = {
-                Column(modifier = Modifier.alpha(0.32f)) {
-                    ServeBall(size = 56.dp)
-                }
-            },
-        )
-        return
-    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PadelPalette.Background),
+    ) {
+        if (matches.isEmpty()) {
+            EmptyState(
+                title = "Aún no jugaste ningún partido",
+                subtitle = "Arrancá uno y te lo guardo acá.",
+                ctaLabel = "Jugar un partido",
+                onCta = onPlayMatch,
+                decoration = {
+                    Column(modifier = Modifier.alpha(0.32f)) {
+                        ServeBall(size = 56.dp)
+                    }
+                },
+            )
+        } else {
+            HistoryList(
+                matches = matches,
+                totalMatches = totalMatches,
+                winPct = winPct,
+                onMatchClick = onMatchClick,
+            )
+        }
 
+        FloatingActionButton(
+            onClick = onAddManualMatch,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Cargar partido manualmente")
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun HistoryList(
+    matches: List<MatchSummary>,
+    totalMatches: Int,
+    winPct: Int,
+    onMatchClick: (String) -> Unit,
+) {
     val grouped = matches.groupedByPeriod()
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(PadelPalette.Background)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -218,7 +297,7 @@ internal fun HistoryScreenContent(
                 color = PadelTheme.colors.gold,
             )
             Text(
-                text = "$totalMatches PARTIDOS · $winPct% V",
+                text = "$totalMatches ${if (totalMatches == 1) "PARTIDO" else "PARTIDOS"} · $winPct% V",
                 style = PadelTheme.sportType.sectionHeader,
                 color = PadelTheme.colors.textFaint,
                 modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
@@ -241,7 +320,8 @@ internal fun HistoryScreenContent(
             }
         }
 
-        item { Spacer(modifier = Modifier.size(16.dp)) }
+        // Colchón para que el FAB no tape la última card: 56 (FAB) + 16 (margen) + 16.
+        item { Spacer(modifier = Modifier.height(88.dp)) }
     }
 }
 

@@ -66,6 +66,15 @@ class FakeMatchRepository(
         matchesFlow.value = matchesFlow.value + match
     }
 
+    override suspend fun insertMatches(matches: List<Match>): Int {
+        insertFailure?.let { throw it }
+        val existing = matchesFlow.value.map { it.id }.toSet()
+        val fresh = matches.filterNot { it.id in existing }.distinctBy { it.id }
+        insertCount += fresh.size
+        matchesFlow.value = matchesFlow.value + fresh
+        return fresh.size
+    }
+
     override suspend fun deleteMatch(matchId: String) {
         matchesFlow.value = matchesFlow.value.filterNot { it.id == matchId }
     }

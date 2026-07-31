@@ -6,6 +6,7 @@ import app.cash.paparazzi.Paparazzi
 import com.gonzalocamera.padelcounter.mobile.data.UserPreferences
 import com.gonzalocamera.padelcounter.mobile.ui.components.MatchCard
 import com.gonzalocamera.padelcounter.mobile.ui.history.HistoryScreenContent
+import com.gonzalocamera.padelcounter.mobile.ui.history.ManualMatchSheetContent
 import com.gonzalocamera.padelcounter.mobile.ui.history.MatchDetailContent
 import com.gonzalocamera.padelcounter.mobile.ui.scoring.CourtScreen
 import com.gonzalocamera.padelcounter.mobile.ui.scoring.MatchEndSheet
@@ -94,6 +95,19 @@ private val SAMPLE_MATCH_LOSS = Match(
     origin = MatchOrigin.WEAR
 )
 
+/** Partido cargado a mano: sin duración (startedAt == finishedAt) y sin golpes. */
+private val SAMPLE_MATCH_MANUAL = Match(
+    id = "3",
+    startedAt = 1716037200000,
+    finishedAt = 1716037200000,
+    setsScore = listOf(listOf(6, 4), listOf(6, 3)),
+    tieBreakUsed = false,
+    decider = Decider.TB7,
+    scoringMode = ScoringMode.DEUCE,
+    winner = Winner.MY,
+    origin = MatchOrigin.MANUAL
+)
+
 private val SAMPLE_SUMMARY_WIN = MatchSummary(
     id = "1",
     finishedAt = 1716103600000,
@@ -109,6 +123,14 @@ private val SAMPLE_SUMMARY_LOSS = MatchSummary(
     winner = Winner.OPP,
     origin = MatchOrigin.WEAR,
     bestOf = 5
+)
+
+private val SAMPLE_SUMMARY_MANUAL = MatchSummary(
+    id = "3",
+    finishedAt = 1716037200000,
+    setsScore = listOf(listOf(6, 4), listOf(6, 3)),
+    winner = Winner.MY,
+    origin = MatchOrigin.MANUAL
 )
 
 private val SAMPLE_STATS = AggregateStats(
@@ -251,7 +273,8 @@ class MobileScreenshot_History {
                     totalMatches = 0,
                     winPct = 0,
                     onMatchClick = {},
-                    onPlayMatch = {}
+                    onPlayMatch = {},
+                    onAddManualMatch = {}
                 )
             }
         }
@@ -265,7 +288,8 @@ class MobileScreenshot_History {
                     totalMatches = 2,
                     winPct = 50,
                     onMatchClick = {},
-                    onPlayMatch = {}
+                    onPlayMatch = {},
+                    onAddManualMatch = {}
                 )
             }
         }
@@ -286,6 +310,36 @@ class MobileScreenshot_History {
             }
         }
     }
+
+    @Test fun matchCard_manual() {
+        paparazzi.snapshot {
+            PadelMobileTheme {
+                MatchCard(summary = SAMPLE_SUMMARY_MANUAL, onClick = {})
+            }
+        }
+    }
+
+    @Test fun manualMatchSheet() {
+        paparazzi.snapshot {
+            PadelMobileTheme {
+                androidx.compose.foundation.layout.Box(
+                    modifier = androidx.compose.ui.Modifier
+                        .background(com.gonzalocamera.padelcounter.mobile.ui.theme.PadelPalette.Card)
+                ) {
+                    ManualMatchSheetContent(
+                        bestOf = 3,
+                        sets = listOf(6 to 4, 3 to 6, 0 to 0),
+                        dateLabel = "19 de mayo, 2024",
+                        canSave = false,
+                        onBestOfChange = {},
+                        onSetScoreChange = { _, _, _ -> },
+                        onPickDate = {},
+                        onSave = {}
+                    )
+                }
+            }
+        }
+    }
 }
 
 class MobileScreenshot_MatchDetail {
@@ -303,6 +357,15 @@ class MobileScreenshot_MatchDetail {
         paparazzi.snapshot {
             PadelMobileTheme {
                 MatchDetailContent(match = SAMPLE_MATCH_LOSS)
+            }
+        }
+    }
+
+    /** Congela que un partido manual no muestre duración ni modo de juego inventados. */
+    @Test fun matchDetail_manual() {
+        paparazzi.snapshot {
+            PadelMobileTheme {
+                MatchDetailContent(match = SAMPLE_MATCH_MANUAL)
             }
         }
     }

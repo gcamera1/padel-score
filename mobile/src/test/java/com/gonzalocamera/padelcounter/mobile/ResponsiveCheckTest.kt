@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.Density
+import com.gonzalocamera.padelcounter.mobile.ui.history.ManualMatchSheetContent
 import com.gonzalocamera.padelcounter.mobile.ui.history.MatchDetailContent
 import com.gonzalocamera.padelcounter.mobile.ui.scoring.CourtScreen
 import com.gonzalocamera.padelcounter.mobile.ui.scoring.NewMatchSheetContent
@@ -69,6 +70,8 @@ class Responsive360 {
             }
         }
     }
+
+    @Test fun manualMatch() = paparazzi.snapshot { PadelMobileTheme { ManualMatchSheetPreview() } }
 }
 
 class Responsive320 {
@@ -76,4 +79,21 @@ class Responsive320 {
 
     @Test fun matchDetail() = paparazzi.snapshot { PadelMobileTheme { MatchDetailContent(match = MATCH) } }
     @Test fun stats() = paparazzi.snapshot { PadelMobileTheme { StatsContent(stats = STATS) } }
+
+    // 5 sets es el peor caso de ancho: label + dos steppers de 48dp por lado en 320dp.
+    @Test fun manualMatch() = paparazzi.snapshot { PadelMobileTheme { ManualMatchSheetPreview() } }
+}
+
+@androidx.compose.runtime.Composable
+private fun ManualMatchSheetPreview() {
+    androidx.compose.foundation.layout.Box(modifier = Modifier.background(PadelPalette.Card)) {
+        ManualMatchSheetContent(
+            bestOf = 5,
+            sets = listOf(6 to 4, 3 to 6, 7 to 5, 0 to 0, 0 to 0),
+            dateLabel = "19 de mayo, 2024",
+            canSave = true,
+            onBestOfChange = {}, onSetScoreChange = { _, _, _ -> },
+            onPickDate = {}, onSave = {},
+        )
+    }
 }

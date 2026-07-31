@@ -7,9 +7,12 @@ import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchSummary
 import com.gonzalocamera.padelcounter.shared.PadelCategory
 import com.gonzalocamera.padelcounter.shared.Winner
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -20,6 +23,11 @@ data class HistorySummary(
     companion object {
         val Empty = HistorySummary(0, 0)
     }
+}
+
+sealed interface HistoryUiEvent {
+    data object ManualMatchSaved : HistoryUiEvent
+    data class ShowError(val message: String) : HistoryUiEvent
 }
 
 class HistoryViewModel(private val repository: MatchRepository) : ViewModel() {
@@ -43,6 +51,26 @@ class HistoryViewModel(private val repository: MatchRepository) : ViewModel() {
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HistorySummary.Empty)
+
+    private val _events = Channel<HistoryUiEvent>(Channel.BUFFERED)
+    val events: Flow<HistoryUiEvent> = _events.receiveAsFlow()
+
+    /**
+     * Guarda un partido cargado a mano. Avisa siempre por [events]: la card nueva se
+     * ordena por fecha, así que un partido viejo aparece fuera de pantalla y sin
+     * confirmación el usuario lo cargaría dos veces.
+     */
+    internal fun saveManualMatch(draft: ManualMatchDraft) {
+        if (!draft.isValid) return
+        viewModelScope.launch {
+            try {
+                repository.insertMatch(draft.toMatch())
+                _events.send(HistoryUiEvent.ManualMatchSaved)
+            } catch (e: Exception) {
+                _events.send(HistoryUiEvent.ShowError(e.message ?: "No se pudo guardar el partido"))
+            }
+        }
+    }
 
     fun deleteMatch(matchId: String) {
         viewModelScope.launch {

@@ -32,6 +32,9 @@ import java.util.Locale
 
 private val relativeFormat = SimpleDateFormat("dd MMM · HH:mm", Locale("es"))
 
+/** Los partidos manuales solo guardan el día: mostrar una hora inventada confundiría. */
+private val manualDateFormat = SimpleDateFormat("dd MMM", Locale("es"))
+
 @Composable
 fun MatchCard(
     summary: MatchSummary,
@@ -90,7 +93,10 @@ fun MatchCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = relativeFormat.format(Date(summary.finishedAt)).uppercase(),
+                        text = when (summary.origin) {
+                            MatchOrigin.MANUAL -> manualDateFormat.format(Date(summary.finishedAt))
+                            else -> relativeFormat.format(Date(summary.finishedAt))
+                        }.uppercase(),
                         style = MaterialTheme.typography.labelSmall,
                         color = PadelTheme.colors.textFaint,
                     )
@@ -107,6 +113,7 @@ private fun OriginPill(origin: MatchOrigin) {
         text = when (origin) {
             MatchOrigin.MOBILE -> "MÓVIL"
             MatchOrigin.WEAR -> "RELOJ"
+            MatchOrigin.MANUAL -> "MANUAL"
         },
         style = MaterialTheme.typography.labelSmall,
         color = PadelTheme.colors.textMuted,

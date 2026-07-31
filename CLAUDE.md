@@ -48,7 +48,7 @@ Three Gradle modules:
 - `StrokeStats` — pure interpretation of stroke data (phone side): `Match.strokeStats(category)`
   derives PGG (strokes ÷ games) per set and total; `strokeAggregate(matches, category)` aggregates
   history; `PadelCategory.verdict(pgg)` maps PGG → `StrokeVerdict` calibrated by category
-- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin`, `ScoringMode`,
+- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin` (`WEAR`/`MOBILE`/`MANUAL`), `ScoringMode`,
   `StrokeSensitivity`, `PadelCategory`, `StrokeVerdict`
 
 ### `:wear` (Wear OS, API 30-34, Compose for Wear)
@@ -68,6 +68,19 @@ Three Gradle modules:
 - `data/MobileRepository` — single repository coordinating Room + DataStore
 - `sync/SyncBridgeListener` — receives match data from watch via Wearable DataClient
 - `sync/SyncBridgeClient` — checks watch connectivity
+- **Manual match entry:** a FAB in History opens `ManualMatchSheet` (bottom sheet) to load an
+  already-played match. `ManualMatchDraft` (`ui/history/`) holds the pure logic — sets left at 0-0
+  are discarded, and `winner`/`tieBreakUsed` are derived from the score. Saved with
+  `origin = MatchOrigin.MANUAL`, `startedAt == finishedAt` (local noon of the chosen date), so the
+  detail screen hides "Duración" and "Modo" for these matches. They do count toward Stats
+- **Share result:** a share action in the match detail builds the WhatsApp-formatted text in
+  `MatchShareText.kt` (pure, testable) and fires a generic `ACTION_SEND` chooser (`ShareMatch.kt`).
+  The stroke block is included only when the watch sent data
+- **History backup:** Settings → Tools exports/imports the whole history as versioned JSON
+  (`MatchArchive` in `:shared`) through the Storage Access Framework — no storage permissions.
+  Import **merges** by id (`INSERT OR IGNORE`), so re-importing never duplicates or overwrites.
+  `MatchArchive` needs `encodeDefaults = true`: without it kotlinx omits `version`, which would
+  make the compatibility check useless once `ARCHIVE_VERSION` moves past 1
 - **Stroke stats:** phone interprets the watch's raw data via `StrokeStats` (`:shared`). PGG + verdict
   are derived at read-time (not persisted) using the `PadelCategory` chosen in Settings, and shown in a
   "GOLPES" section of the match detail (per set + total) and aggregated in the Stats screen

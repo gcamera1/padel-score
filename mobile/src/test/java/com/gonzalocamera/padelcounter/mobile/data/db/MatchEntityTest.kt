@@ -33,4 +33,19 @@ class MatchEntityTest {
         assertThat(entity.strokesPerSetJson).isNull()
         assertThat(entity.toMatch().strokesPerSet).isNull()
     }
+
+    @Test
+    fun `round-trip preserves MANUAL origin`() {
+        val entity = match(null).copy(origin = MatchOrigin.MANUAL).toEntity()
+        assertThat(entity.origin).isEqualTo("MANUAL")
+        assertThat(entity.toMatch().origin).isEqualTo(MatchOrigin.MANUAL)
+    }
+
+    @Test
+    fun `unknown origin falls back to MOBILE instead of throwing`() {
+        // Protege el historial completo ante un downgrade a una versión sin MANUAL:
+        // el mapeo corre dentro de un Flow, así que una excepción tumbaría toda la lista.
+        val entity = match(null).toEntity().copy(origin = "GARBAGE")
+        assertThat(entity.toMatch().origin).isEqualTo(MatchOrigin.MOBILE)
+    }
 }

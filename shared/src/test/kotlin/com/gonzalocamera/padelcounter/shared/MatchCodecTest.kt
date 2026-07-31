@@ -212,6 +212,24 @@ class MatchCodecTest {
     }
 
     @Test
+    fun `round-trip with MANUAL origin`() {
+        val match = Match(
+            id = "manual-match",
+            startedAt = 1700000000000L,
+            finishedAt = 1700000000000L,
+            setsScore = listOf(listOf(6, 4), listOf(6, 3)),
+            tieBreakUsed = false,
+            decider = Decider.TB7,
+            scoringMode = ScoringMode.DEUCE,
+            winner = Winner.MY,
+            origin = MatchOrigin.MANUAL
+        )
+        val decoded = decodeMatch(encodeMatch(match))
+        assertThat(decoded).isEqualTo(match)
+        assertThat(String(encodeMatch(match))).contains("\"origin\":\"MANUAL\"")
+    }
+
+    @Test
     fun `decode old match without strokesPerSet defaults to null`() {
         val json = """{"id":"old-no-strokes","startedAt":0,"finishedAt":0,"setsScore":[[6,0],[6,0]],"tieBreakUsed":false,"decider":"TB7","goldenPoint":false,"scoringMode":"DEUCE","winner":"MY","origin":"WEAR"}"""
         val decoded = decodeMatch(json.toByteArray())

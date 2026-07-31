@@ -49,7 +49,7 @@ fun MatchEntity.toMatch(): Match = Match(
         if (goldenPoint) ScoringMode.GOLDEN_POINT else ScoringMode.DEUCE
     ),
     winner = Winner.valueOf(winner),
-    origin = MatchOrigin.valueOf(origin),
+    origin = runCatching { MatchOrigin.valueOf(origin) }.getOrDefault(MatchOrigin.MOBILE),
     bestOf = bestOf,
     strokesPerSet = strokesPerSetJson?.let {
         runCatching { Json.decodeFromString<List<Int>>(it) }.getOrNull()

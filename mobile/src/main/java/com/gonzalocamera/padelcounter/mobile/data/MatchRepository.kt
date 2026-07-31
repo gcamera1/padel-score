@@ -19,6 +19,9 @@ interface MatchRepository {
     val userPreferences: Flow<UserPreferences>
 
     suspend fun insertMatch(match: Match)
+
+    /** Inserta los que falten (por id) y devuelve cuántos entraron realmente. */
+    suspend fun insertMatches(matches: List<Match>): Int
     suspend fun deleteMatch(matchId: String)
     suspend fun getMatch(matchId: String): Match?
     suspend fun saveCurrentState(state: PadelState, startedAt: Long)

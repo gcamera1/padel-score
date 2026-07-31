@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gonzalocamera.padelcounter.mobile.ui.components.PadelTopAppBar
@@ -57,6 +59,9 @@ import java.util.Locale
 
 private val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es"))
 
+/** Los partidos manuales solo tienen día — mostrar la hora inventada confundiría. */
+private val manualDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale("es"))
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MatchDetailScreen(
@@ -68,6 +73,7 @@ fun MatchDetailScreen(
     var isLoading by remember { mutableStateOf(true) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     val category by viewModel.category.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(matchId) {
         match = viewModel.getMatchDetail(matchId)
@@ -80,6 +86,15 @@ fun MatchDetailScreen(
                 title = "Detalle",
                 onBack = onBack,
                 actions = {
+                    match?.let { loaded ->
+                        IconButton(onClick = { shareMatch(context, loaded, category) }) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = "Compartir resultado",
+                                tint = PadelTheme.colors.gold,
+                            )
+                        }
+                    }
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(
                             Icons.Default.Delete,
@@ -152,6 +167,9 @@ internal fun MatchDetailContent(
     val win = match.winner == Winner.MY
     val accent = if (win) PadelTheme.colors.goldLight else PadelTheme.colors.textMuted
     val durationMinutes = ((match.finishedAt - match.startedAt) / 60_000).coerceAtLeast(0L)
+    // Un partido cargado a mano no tiene duración ni modo de juego reales: solo se guarda
+    // el marcador y la fecha, así que esos campos se ocultan en vez de mostrar defaults.
+    val isManual = match.origin == MatchOrigin.MANUAL
 
     Column(
         modifier = modifier
@@ -187,7 +205,7 @@ internal fun MatchDetailContent(
                     color = PadelPalette.Text,
                 )
                 Text(
-                    text = buildString {
+                    text = if (isManual) "CARGA MANUAL" else buildString {
                         append(when (match.decider) {
                             Decider.TB7 -> "TB7"
                             Decider.SUPER10 -> "S10"
@@ -267,13 +285,19 @@ internal fun MatchDetailContent(
             ) {
                 SectionHeader("Configuración")
                 Spacer(modifier = Modifier.height(8.dp))
-                DetailRow("Fecha", dateFormat.format(Date(match.finishedAt)))
-                DetailRow("Duración", formatDuration(durationMinutes))
-                DetailRow("Modo", when (match.scoringMode) {
-                    ScoringMode.DEUCE -> "Deuce / Ventaja"
-                    ScoringMode.GOLDEN_POINT -> "Punto de Oro"
-                    ScoringMode.STAR_POINT -> "Star Point"
-                })
+                DetailRow(
+                    "Fecha",
+                    if (isManual) manualDateFormat.format(Date(match.finishedAt))
+                    else dateFormat.format(Date(match.finishedAt)),
+                )
+                if (!isManual) {
+                    DetailRow("Duración", formatDuration(durationMinutes))
+                    DetailRow("Modo", when (match.scoringMode) {
+                        ScoringMode.DEUCE -> "Deuce / Ventaja"
+                        ScoringMode.GOLDEN_POINT -> "Punto de Oro"
+                        ScoringMode.STAR_POINT -> "Star Point"
+                    })
+                }
                 DetailRow("Formato", when (match.bestOf) {
                     1 -> "Al mejor de 1 set"
                     3 -> "Al mejor de 3 sets"
@@ -284,6 +308,7 @@ internal fun MatchDetailContent(
                 DetailRow("Origen", when (match.origin) {
                     MatchOrigin.WEAR -> "Reloj"
                     MatchOrigin.MOBILE -> "Móvil"
+                    MatchOrigin.MANUAL -> "Carga manual"
                 })
             }
         }
@@ -370,12 +395,20 @@ internal fun InlineMatchDetailScaffold(
     category: PadelCategory = PadelCategory.SEXTA,
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     Scaffold(
         topBar = {
             PadelTopAppBar(
                 title = "Detalle",
                 onBack = onBack,
                 actions = {
+                    IconButton(onClick = { shareMatch(context, match, category) }) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "Compartir resultado",
+                            tint = PadelTheme.colors.gold,
+                        )
+                    }
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(
                             Icons.Default.Delete,

@@ -34,6 +34,11 @@ class MobileRepository(
         matchDao.insertIfAbsent(match.toEntity())
     }
 
+    // insertIfAbsent es INSERT OR IGNORE: devuelve -1 cuando el id ya existía, así que
+    // importar dos veces el mismo backup no duplica nada.
+    override suspend fun insertMatches(matches: List<Match>): Int =
+        matches.count { matchDao.insertIfAbsent(it.toEntity()) != -1L }
+
     override suspend fun deleteMatch(matchId: String) {
         matchDao.deleteById(matchId)
     }

@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.gonzalocamera.padelcounter.mobile.MainDispatcherRule
 import com.gonzalocamera.padelcounter.mobile.data.FakeMatchRepository
+import com.gonzalocamera.padelcounter.shared.MatchOrigin
 import com.gonzalocamera.padelcounter.shared.Winner
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -65,4 +66,76 @@ class HistoryViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `saveManualMatch inserts a MANUAL match`() = runTest {
+        val repo = FakeMatchRepository()
+        val vm = HistoryViewModel(repo)
+
+        vm.matches.test {
+            skipItems(1) // emisión inicial vacía
+            vm.saveManualMatch(validDraft())
+            advanceUntilIdle()
+
+            val summaries = awaitItem()
+            assertThat(summaries).hasSize(1)
+            assertThat(summaries.single().origin).isEqualTo(MatchOrigin.MANUAL)
+            assertThat(summaries.single().winner).isEqualTo(Winner.MY)
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertThat(repo.insertCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `saveManualMatch emits ManualMatchSaved on success`() = runTest {
+        val repo = FakeMatchRepository()
+        val vm = HistoryViewModel(repo)
+
+        vm.events.test {
+            vm.saveManualMatch(validDraft())
+            advanceUntilIdle()
+
+            assertThat(awaitItem()).isEqualTo(HistoryUiEvent.ManualMatchSaved)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `saveManualMatch ignores an invalid draft`() = runTest {
+        val repo = FakeMatchRepository()
+        val vm = HistoryViewModel(repo)
+
+        vm.events.test {
+            // Todos los sets en 0-0: no hay nada que guardar.
+            vm.saveManualMatch(ManualMatchDraft(dateMillis = MANUAL_DATE))
+            advanceUntilIdle()
+
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertThat(repo.insertCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `saveManualMatch emits ShowError when the repository fails`() = runTest {
+        val repo = FakeMatchRepository().apply { insertFailure = RuntimeException("disco lleno") }
+        val vm = HistoryViewModel(repo)
+
+        vm.events.test {
+            vm.saveManualMatch(validDraft())
+            advanceUntilIdle()
+
+            assertThat(awaitItem()).isEqualTo(HistoryUiEvent.ShowError("disco lleno"))
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertThat(repo.insertCount).isEqualTo(0)
+    }
+
+    private fun validDraft() = ManualMatchDraft(
+        bestOf = 3,
+        sets = listOf(6 to 4, 6 to 3, 0 to 0),
+        dateMillis = MANUAL_DATE,
+    )
 }
+
+private const val MANUAL_DATE = 1_716_103_600_000L

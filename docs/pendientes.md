@@ -1,15 +1,17 @@
 # Pendientes — Simple Padel Score
 
-Estado al **1 de agosto de 2026**, después de enviar la app de Wear OS a revisión.
+Estado al **2 de agosto de 2026**.
 
 ## Estado actual de la publicación
 
-| Artefacto | versionCode | versionName | Estado |
-|-----------|-------------|-------------|--------|
-| mobile | 350100000 | 1.0.0 | Producción, 177 países (publicado 30/07/2026) |
-| wear | 340100003 | 1.0.0 | **En revisión** — Envío 11, 01/08/2026 01:37 |
+| Artefacto | versionCode | versionName | targetSdk | Estado |
+|-----------|-------------|-------------|-----------|--------|
+| mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (publicado 30/07/2026) |
+| wear | 340100003 | 1.0.0 | 34 | **En revisión** — Envío 11, 01/08/2026 01:37 |
+| mobile | 360110000 | 1.1.0 | 36 | Sin publicar — branch `chore/target-sdk-bump` |
+| wear | 350110003 | 1.1.0 | 35 | Sin publicar — branch `chore/target-sdk-bump` |
 
-La release de reloj va a producción al 100% en 177 países. Con *Publicación gestionada
+La release de reloj 1.0.0 va a producción al 100% en 177 países. Con *Publicación gestionada
 desactivada*, se publica automáticamente en cuanto Google la apruebe (plazo estimado: 7 días).
 
 ---
@@ -30,8 +32,8 @@ Versionado nuevo: `PADEL_MOBILE_VERSION_CODE=360110000`,
 `compileSdk 36` — falla con `lateinit property sessionParamsBuilder has not been initialized`
 y se cae toda la suite de screenshot tests. El soporte llegó en Paparazzi 2.0.0-alpha02 con
 LayoutLib 15.2.3. Lo que Play evalúa es el targetSdk del manifest, así que el requisito se
-cumple igual. **Pendiente menor:** cuando Paparazzi 2.x sea estable, subir `compileSdk` a 36
-y regrabar los snapshots de `:mobile`.
+cumple igual. Subirlo a 36 implica migrar el toolchain completo — ver la sección
+**"Migración de toolchain"** más abajo.
 
 Lo que se migró junto con el salto (Android 16 hace el edge-to-edge obligatorio y **elimina
 el opt-out**):
@@ -97,20 +99,79 @@ resultado, backup/import del historial y contacto. Todo eso está en `main` y no
 
 ### Advisories de la consola sobre el AAB de mobile
 
-Los tres son de "calidad técnica" / "experiencia de usuario", ninguno bloqueante:
+De los tres que marcaba la consola, **los dos de edge-to-edge ya están resueltos** en
+`chore/target-sdk-bump` (ver sección 1). Queda uno solo, y no es bloqueante:
 
-- `androidx.fragment` desactualizado (viene por transitividad, no se usa directo)
-- Edge-to-edge: "es posible que la vista de extremo a extremo no funcione para todos los
-  usuarios"
-- Edge-to-edge: "tu aplicación usa APIs o parámetros obsoletos"
-
-Los dos de edge-to-edge se resuelven juntos y hay un skill (`google-edge-to-edge`) que cubre
-la migración. Conviene atacarlos en la misma tanda que el salto a `targetSdk 36`, porque el
-36 endurece justamente ese comportamiento.
+- `androidx.fragment` desactualizado. Viene por transitividad de alguna dependencia, no se usa
+  directo, así que se va a resolver solo cuando se suba el Compose BOM en la migración de
+  toolchain (sección 3).
 
 ---
 
-## 3. Detalles menores de código
+## 3. Migración de toolchain (AGP / Kotlin / Compose / Paparazzi)
+
+**Decidido el 02/08/2026: se hace, pero como tanda propia y después de publicar 1.1.0.**
+No desbloquea nada — el requisito de Play es el `targetSdk` del manifest y ya está cumplido.
+El único beneficio concreto es poder poner `compileSdk 36` en `:mobile`, que es correctitud de
+configuración, no funcionalidad.
+
+### Estado del toolchain
+
+| Componente | Versión actual |
+|------------|----------------|
+| AGP | 8.5.2 |
+| Kotlin | 1.9.24 |
+| Compose Compiler | 1.5.14 (plugin separado, pre-Kotlin 2.0) |
+| Compose BOM | 2024.06.00 |
+| Wear Compose | 1.4.1 |
+| Paparazzi | 1.3.4 |
+| Gradle | 9.2.1 (ya al día, no hace falta tocarlo) |
+
+### Lo que está verificado
+
+- **AGP 8.5.2 compila con `compileSdk 36`.** Probado: `:mobile:compileDebugKotlin` pasa, solo
+  emite el warning de "conviene usar un AGP más nuevo". No hay que subir AGP para cumplir el
+  requisito de Play.
+- **Paparazzi 1.3.4 NO soporta `compileSdk 36`.** Probado: los 20 screenshot tests de
+  `:mobile` fallan con `kotlin.UninitializedPropertyAccessException: lateinit property
+  sessionParamsBuilder has not been initialized`. Con `compileSdk 35` pasan todos.
+- **El soporte de API 36 en Paparazzi llegó en 2.0.0-alpha02**, con LayoutLib 15.2.3
+  ([release](https://github.com/cashapp/paparazzi/releases/tag/2.0.0-alpha02),
+  [issue #1877](https://github.com/cashapp/paparazzi/issues/1877)). Sigue en alpha.
+
+### Lo que NO está verificado (hay que confirmarlo antes de empezar)
+
+Esto es la cadena *esperada*, no comprobada. Conviene chequear la matriz de compatibilidad
+real antes de tocar versiones:
+
+- Que AGP nuevo obligue a **Kotlin 2.x** (el KGP 1.9.24 no está soportado con AGP tan nuevo).
+- Qué **versión mínima de AGP** soporta API 36 nativamente.
+- Con qué AGP es compatible **Paparazzi 2.x**.
+
+### Trabajo que implica
+
+1. Kotlin 2.x cambia cómo se configura Compose: desaparece
+   `composeOptions.kotlinCompilerExtensionVersion` y entra el plugin
+   `org.jetbrains.kotlin.plugin.compose`. Toca los `build.gradle.kts` de `:mobile` y `:wear`.
+2. Subir el Compose BOM (el actual es de junio 2024). Ahí aparecen cambios de API y de
+   apariencia en Material3.
+3. Subir Paparazzi y **regrabar todos los snapshots**: ~20 de `:mobile` y 6 de `:wear`. Hay
+   que revisarlos de a uno para distinguir "cambió el antialiasing" de "se rompió el layout".
+4. Recién entonces, `compileSdk = 36` en `:mobile`.
+
+### Por qué no se hizo junto con el bump de targetSdk
+
+El riesgo se concentra justo donde hay menos cobertura: lo que se rompe es la UI y los
+screenshot tests, o sea que la red de seguridad se cae al mismo tiempo que lo que hay que
+verificar. Y meter Paparazzi 2.x alpha —la única verificación visual del proyecto— es un
+downgrade de confiabilidad mientras siga en alpha.
+
+Argumento a favor de no dejarlo eternamente: el Compose BOM ya tiene más de dos años, y el
+próximo ciclo de requisitos de Play va a empujar igual. Mejor hacerlo en frío que apurado.
+
+---
+
+## 4. Detalles menores de código
 
 Ninguno bloquea nada. Ordenados por valor.
 
@@ -149,7 +210,7 @@ afuera solo para el test. Ya está documentado en el header de `CounterScreensho
 
 ---
 
-## 4. Cosas a verificar en Play Console
+## 5. Cosas a verificar en Play Console
 
 - **Declaración de IA.** La ficha tiene 4 slots de capturas de tablet (7" y 10", posiciones 7
   y 8) que usan archivos llamados `Gemini_Generated_Image_*.png`, subidos el 11/03/2026 — las
@@ -166,7 +227,7 @@ afuera solo para el test. Ya está documentado en el header de `CounterScreensho
 
 ---
 
-## 5. Housekeeping local
+## 6. Housekeeping local
 
 - **Desinstalar del reloj el APK de prueba.** El instalado en el Galaxy Watch 6 está firmado
   con la **debug keystore** (bundletool la usó para poder instalarlo local). Play **no puede
@@ -179,11 +240,39 @@ afuera solo para el test. Ya está documentado en el header de `CounterScreensho
 
 ---
 
-## Orden sugerido
+## Plan de releases
 
-1. Esperar la aprobación del reloj (nada que hacer).
-2. Una sola tanda para `:mobile` + `:wear`: `targetSdk` 36 y 35, edge-to-edge, y de paso
-   publicar las features del 31/7 y arreglar el cartel del companion. Cierra el plazo del
-   31 de agosto y la deuda funcional de una vez.
-3. Sacar de circulación el bundle vc5 del canal cerrado.
-4. Los detalles del punto 3 cuando molesten.
+Decidido el 02/08/2026. Tres publicaciones en secuencia, no todo junto:
+
+### Release 1 — Wear OS 1.0.0 (en curso)
+
+`wear 340100003`, ya enviada. **Nada que hacer**: esperar la aprobación de Google. Se publica
+automáticamente al aprobarse.
+
+### Release 2 — 1.1.0, ambos módulos (lista en el branch, sin subir)
+
+Se sube **después** de que Google apruebe la Release 1, para no encimar dos revisiones del
+mismo artefacto. Contenido:
+
+- `targetSdk` 36 (mobile) y 35 (wear) → cierra el plazo del 31 de agosto (sección 1)
+- migración de edge-to-edge → resuelve 2 de los 3 advisories de la consola (sección 1)
+- las features del 31/7 que nunca se publicaron: carga manual, compartir, backup (sección 2)
+- el cartel equivocado del companion, que se arregla solo al publicar mobile (sección 2)
+
+Antes de subirla, hacer también:
+
+- **Probar el edge-to-edge en el teléfono** — es lo único que ningún test cubre
+- **Sacar de circulación el bundle vc5** del canal de prueba cerrada, o el aviso de API de
+  Wear OS no se va (sección 1)
+- Revisar el checklist de `publishing-guide.md` §9
+
+### Release 3 — migración de toolchain
+
+AGP / Kotlin 2.x / Compose BOM / Paparazzi 2.x, y recién ahí `compileSdk 36` en `:mobile`
+(sección 3). Va sola, sin mezclar con cambios funcionales, porque lo que rompe es la UI y los
+screenshot tests al mismo tiempo.
+
+### Sin fecha
+
+Los detalles menores de la sección 4 y las verificaciones de la consola de la sección 5,
+cuando molesten.

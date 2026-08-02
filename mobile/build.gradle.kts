@@ -7,12 +7,18 @@ plugins {
 
 android {
     namespace = "com.gonzalocamera.padelcounter.mobile"
+    // compileSdk se queda en 35 a propósito, un nivel por debajo del targetSdk:
+    // Paparazzi 1.3.4 no soporta compileSdk 36 (falla con "lateinit property
+    // sessionParamsBuilder has not been initialized" y se cae toda la suite de
+    // screenshot tests). El soporte llegó en Paparazzi 2.0.0-alpha02 con LayoutLib
+    // 15.2.3; cuando sea estable, subir ambos a 36 y regrabar los snapshots.
+    // Lo que Play exige es el targetSdk del manifest, así que el requisito se cumple.
     compileSdk = 35
 
     defaultConfig {
         applicationId = "com.gonzalocamera.padelcounter"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = (project.properties["PADEL_MOBILE_VERSION_CODE"] as String).toInt()
         versionName = project.properties["PADEL_VERSION_NAME"] as String
     }

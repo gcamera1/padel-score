@@ -5,10 +5,12 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 
 ## Estado actual
 
-| Artefacto | versionCode | versionName | Estado |
-|-----------|-------------|-------------|--------|
-| mobile | 350100000 | 1.0.0 | **Producción**, 177 países |
-| wear | 340100003 | 1.0.0 | Pendiente de subir |
+| Artefacto | versionCode | versionName | targetSdk | Estado |
+|-----------|-------------|-------------|-----------|--------|
+| mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (desde 30/07/2026) |
+| wear | 340100003 | 1.0.0 | 34 | En revisión — Envío 11, 01/08/2026 |
+| mobile | 360110000 | 1.1.0 | **36** | Sin publicar (branch `chore/target-sdk-bump`) |
+| wear | 350110003 | 1.1.0 | **35** | Sin publicar (branch `chore/target-sdk-bump`) |
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos
@@ -80,13 +82,15 @@ wear:   34 · 010 · 00 · 03  ->  340100003
 
 - Cada AAB que subís a Play debe tener un versionCode **mayor** al de la última release
   publicada de **ese mismo track**. Subir el reloj no obliga a tocar el del teléfono.
-- **El reloj debe pasar a `targetSdk 35` antes del 31 de agosto de 2026.** Play lo dice
-  textual en el panel: *"La aplicación para Wear OS debe estar orientada a Android 15 (nivel
-  35 de la API) o a una versión posterior"*. Wear OS queda exceptuado del requisito general
-  de API 36, pero no del 35. Después de esa fecha no se pueden publicar actualizaciones del
-  artefacto de reloj con API 34.
+- **Target API requerido por Play desde el 31 de agosto de 2026:** `:mobile` → 36
+  (Android 16), `:wear` → 35 (Android 15). Wear OS queda exceptuado del 36, pero no del 35;
+  la consola lo dice textual: *"La aplicación para Wear OS debe estar orientada a Android 15
+  (nivel 35 de la API) o a una versión posterior"*. Ambos módulos ya cumplen.
   El umbral de API 34 que figura en la guía de calidad como WO-P1 es el que rigió desde
   agosto de **2025** — quedó viejo, la consola es la fuente autoritativa.
+- **`:mobile` usa `compileSdk 35` con `targetSdk 36`** a propósito: Paparazzi 1.3.4 no
+  soporta `compileSdk 36`. Ver el comentario en `mobile/build.gradle.kts`. Lo que Play
+  evalúa es el targetSdk del manifest, así que el requisito se cumple igual.
 
 ## 4. Generar AABs Firmados
 
@@ -177,7 +181,7 @@ Los que aplican a esta app, de la
 
 | ID | Requisito | Estado |
 |----|-----------|--------|
-| WO-P1 | targetSdk | ⚠️ `targetSdk = 34` — válido para publicar **hasta el 31/08/2026**; después Play exige 35 (ver §3) |
+| WO-P1 | targetSdk | ✅ `targetSdk = 35` — cumple el requisito que rige desde el 31/08/2026 |
 | WO-P2 | No crashea al instalar/abrir | verificar en reloj real |
 | WO-P5 | La app non-standalone conecta con el companion | ✅ `CompanionDetector` |
 | WO-V3 | Swipe para cerrar funciona | verificar (el marcador usa swipe-left para ajustes) |

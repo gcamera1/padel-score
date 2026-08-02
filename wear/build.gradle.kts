@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.gonzalocamera.padelcounter"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.gonzalocamera.padelcounter"
         minSdk = 30
-        targetSdk = 34
+        targetSdk = 35
         versionCode = (project.properties["PADEL_WEAR_VERSION_CODE"] as String).toInt()
         versionName = project.properties["PADEL_VERSION_NAME"] as String
     }

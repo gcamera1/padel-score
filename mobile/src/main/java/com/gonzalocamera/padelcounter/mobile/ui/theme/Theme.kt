@@ -1,15 +1,10 @@
 package com.gonzalocamera.padelcounter.mobile.ui.theme
 
-import android.app.Activity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 
 // Premium "Premier Padel" scheme — matte black + metallic gold. Dark only.
 private val PremiumScheme = darkColorScheme(
@@ -47,17 +42,9 @@ fun PadelMobileTheme(
     val colorScheme = PremiumScheme
     val padelColors = PadelDarkColors
 
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as? Activity)?.window ?: return@SideEffect
-            window.statusBarColor = Color.Transparent.toArgb()
-            window.navigationBarColor = Color.Transparent.toArgb()
-            val controller = WindowCompat.getInsetsController(window, view)
-            controller.isAppearanceLightStatusBars = false
-            controller.isAppearanceLightNavigationBars = false
-        }
-    }
+    // El estilo de las barras del sistema lo fija `enableEdgeToEdge` en MainActivity.
+    // `window.statusBarColor` / `navigationBarColor` quedaron deprecados y sin efecto
+    // desde API 35, así que no se setean acá.
 
     CompositionLocalProvider(
         LocalPadelColors provides padelColors,

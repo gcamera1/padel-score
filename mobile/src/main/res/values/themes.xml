@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
+      NO agregar android:statusBarColor, android:navigationBarColor ni
+      android:windowDrawsSystemBarBackgrounds: quedaron deprecados y sin efecto desde
+      API 35, y con targetSdk 36 el edge-to-edge es obligatorio y sin opt-out.
+      El estilo de las barras lo fija `enableEdgeToEdge` en MainActivity.
+    -->
     <style name="Theme.PadelMobile" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">#050505</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 </resources>

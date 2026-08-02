@@ -64,7 +64,7 @@ Three Gradle modules:
 - `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin` (`WEAR`/`MOBILE`/`MANUAL`), `ScoringMode`,
   `StrokeSensitivity`, `PadelCategory`, `StrokeVerdict`
 
-### `:wear` (Wear OS, API 30-34, Compose for Wear)
+### `:wear` (Wear OS, API 30-35, Compose for Wear)
 - Single-activity (`MainActivity.kt`) with screens (COUNTER, SETTINGS, NEW_MATCH, TUTORIAL, WALKTHROUGH, MATCH_FINISHED, STROKE_TEST) navigated via `mutableStateOf` + `AnimatedVisibility`. No ViewModel, no DI.
 - `PadelDataStore` — `PadelRepository` wrapping DataStore Preferences, exposes `PadelState` as `Flow`
 - `sync/` — `WearSyncQueue` + `WearSyncSender` enqueue completed matches and push to phone via Wearable DataClient

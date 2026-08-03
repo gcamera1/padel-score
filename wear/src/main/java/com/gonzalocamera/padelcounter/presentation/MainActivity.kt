@@ -37,6 +37,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.painterResource
+import com.gonzalocamera.padelcounter.BuildConfig
 import com.gonzalocamera.padelcounter.R
 import com.gonzalocamera.padelcounter.presentation.theme.PadelCounterTheme
 import com.gonzalocamera.padelcounter.presentation.theme.WearBrand
@@ -1048,8 +1049,10 @@ private fun SettingsScreen(
                 OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
             }
             item {
+                // Del BuildConfig, no hardcodeado: estaba fijo en "v1.0.0" y con el bump
+                // a 1.1.0 la pantalla de Ajustes mostraba una versión equivocada.
                 Text(
-                    text = "v1.0.0",
+                    text = "v${BuildConfig.VERSION_NAME}",
                     fontSize = 10.sp,
                     color = WearBrand.Gold.copy(alpha = 0.5f),
                     textAlign = TextAlign.Center,
@@ -1096,13 +1099,16 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
             title = "Navegación",
             description = "Deslizá a la izquierda para abrir Ajustes"
         ),
+        // Descripciones cortas a propósito: en un reloj de 192dp (el mínimo que pide
+        // WO-V16) con la fuente del sistema en Largest, un texto de 4 líneas empuja el
+        // "Tocá para continuar" fuera de la vista inicial.
         WalkthroughStep(
             title = "Contador de golpes",
-            description = "Contamos tus golpes en el partido. Usá el reloj en la muñeca de la paleta"
+            description = "Usá el reloj en la muñeca de la paleta"
         ),
         WalkthroughStep(
             title = "También en tu teléfono",
-            description = "Instalá la app en el celu para guardar tu historial y ver estadísticas"
+            description = "Instalá la app en el celu para ver tu historial"
         ),
         WalkthroughStep(
             title = "¡Listo!",
@@ -1505,10 +1511,12 @@ private fun CompanionPromptScreen(
     onDismiss: () -> Unit
 ) {
     val hasPhone = status == CompanionStatus.PHONE_NO_APP
+    // Mensajes cortos: en un reloj de 192dp con la fuente en Largest, un texto largo
+    // empuja el botón fuera de la vista inicial y hay que scrollear para accionarlo.
     val message = if (hasPhone) {
-        "Guardá tu historial y estadísticas instalando Simple Padel Score en tu teléfono."
+        "Guardá tu historial instalando la app en tu teléfono"
     } else {
-        "Vinculá tu reloj a un teléfono con Simple Padel Score para guardar tu historial y estadísticas."
+        "Vinculá el reloj a un teléfono que tenga la app"
     }
 
     val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)

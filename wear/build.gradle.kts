@@ -43,6 +43,8 @@ android {
 
     buildFeatures {
         compose = true
+        // Para mostrar el versionName real en Ajustes en vez de un string hardcodeado.
+        buildConfig = true
     }
 
     composeOptions {

@@ -70,12 +70,43 @@ Segunda pasada, con las pantallas restantes:
 | Fin de partido | ✅ "Ganaste!", sets y resultado completos, contenido centrado |
 | Fin de partido (scrolleado) | ✅ "Jugar de nuevo" y "Nuevo partido" completos, con barra |
 
-**`TutorialScreen` quedó sin verificar en el emulador**, no por la app sino por la
-automatización: llegar ahí requiere el swipe horizontal de la app, y el emulador lo intercepta
-como gesto de "atrás" del sistema y cierra la app. Se le aplicó el mismo
-`roundSafeContentPadding()` porque tenía 8dp de padding lateral con textos explicativos
-largos — el caso exacto que se cortaba. Verificarlo en el reloj real toma segundos:
-Ajustes → Tutorial con la fuente en Largest.
+### Tercera pasada: emulador de 192dp (el mínimo de WO-V16)
+
+Se repitió todo en un emulador de **384x384 @ 320dpi = 192dp**, más chico que el Galaxy
+Watch 6 real (216dp) y que el primer emulador (227dp). Es el peor caso posible, y ahí
+apareció un problema que en 227dp no se veía: con la fuente en Largest, las descripciones de
+4 líneas del walkthrough empujaban el "Tocá para continuar" fuera de la vista inicial.
+
+Se acortaron los textos más largos, sin perder información:
+
+| Antes | Ahora |
+|-------|-------|
+| "Contamos tus golpes en el partido. Usá el reloj en la muñeca de la paleta" | "Usá el reloj en la muñeca de la paleta" (el conteo ya lo dice el título) |
+| "Instalá la app en el celu para guardar tu historial y ver estadísticas" | "Instalá la app en el celu para ver tu historial" |
+| Companion prompt: "Vinculá tu reloj a un teléfono con Simple Padel Score para guardar tu historial y estadísticas." | "Vinculá el reloj a un teléfono que tenga la app" |
+
+Resultado en 192dp con `font_scale = 1.3`: walkthrough (pasos "Deshacer" y "Contador de
+golpes") con todo el contenido visible sin scrollear, companion prompt con título completo y
+el botón alcanzable, barra de desplazamiento presente, y Ajustes correcto en sus tres
+posiciones de scroll.
+
+### Bug encontrado de paso: versión hardcodeada
+
+La pantalla de Ajustes mostraba **`"v1.0.0"` hardcodeado** (`MainActivity.kt:1052`), así que
+con el bump a 1.1.0 iba a mostrar una versión equivocada. Ahora usa
+`BuildConfig.VERSION_NAME`, lo que requirió habilitar `buildFeatures.buildConfig = true` en
+`wear/build.gradle.kts` (en AGP 8 viene desactivado).
+
+### Lo único sin verificar visualmente: `TutorialScreen`
+
+No es por la app sino por la automatización: llegar ahí requiere el swipe horizontal de la
+app, y el emulador lo intercepta como gesto de "atrás" del sistema y cierra la app. Se
+intentó con varias combinaciones de coordenadas, velocidad y cantidad de swipes.
+
+Se le aplicó el mismo `roundSafeContentPadding()` porque tenía 8dp de padding lateral con
+textos explicativos largos — el caso exacto que se cortaba. Verificarlo en el reloj real toma
+segundos: fuente en Largest, Ajustes → Tutorial, y mirar que el punto 4 (el más largo) no
+tenga letras comidas por la curva.
 
 ### Verificación en hardware
 

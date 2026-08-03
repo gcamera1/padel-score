@@ -126,6 +126,24 @@ internal fun roundSafeContentPadding(sideFraction: Float = 0.12f): PaddingValues
     return PaddingValues(start = side, end = side, top = 40.dp, bottom = 30.dp)
 }
 
+/**
+ * Tamaño de la pelota del paso de bienvenida del walkthrough.
+ *
+ * Se reduce a medida que crece la fuente del sistema: a 48dp fijos, con la fuente en
+ * Largest el contenido empujaba el "Tocá para continuar" fuera de la vista inicial en los
+ * relojes chicos. Play ya rechazó una versión por texto que no entraba, así que ante la
+ * duda gana el texto.
+ */
+@Composable
+internal fun walkthroughBallSize(): Dp {
+    val fontScale = LocalConfiguration.current.fontScale
+    return when {
+        fontScale >= 1.25f -> 24.dp
+        fontScale >= 1.1f -> 34.dp
+        else -> 48.dp
+    }
+}
+
 @Composable
 internal fun rememberScreenMetrics(): ScreenMetrics {
     val config = LocalConfiguration.current
@@ -1181,10 +1199,14 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
                             )
 
                             if (s.showBall) {
+                                // La pelota se achica cuando el usuario agranda la fuente:
+                                // con Largest, sus 48dp empujaban el "Tocá para continuar"
+                                // fuera de la vista inicial. El texto tiene prioridad sobre
+                                // el adorno (WO-V1).
                                 Image(
                                     painter = painterResource(id = R.drawable.padelball),
                                     contentDescription = null,
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size(walkthroughBallSize())
                                 )
                             }
 

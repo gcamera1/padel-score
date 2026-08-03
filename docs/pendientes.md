@@ -115,17 +115,34 @@ comidas, con barra de desplazamiento visible.
 
 ### Cobertura final de la verificación
 
-| Pantalla | 227dp | 192dp |
-|----------|-------|-------|
-| Walkthrough (pasos "Deshacer" y "Contador de golpes") | ✅ | ✅ |
-| Companion prompt | ✅ | ✅ |
-| Barra de desplazamiento durante scroll | ✅ | ✅ |
-| Ajustes | ✅ | ✅ |
-| Nuevo partido (arriba, medio y final) | ✅ | — |
-| Fin de partido (arriba y scrolleado) | ✅ | — |
-| Tutorial | — | ✅ |
+Todo con `font_scale = 1.3` (Largest) y máscara circular aplicada por software, porque tanto
+el emulador como el reloj capturan el framebuffer cuadrado sin el recorte del hardware.
 
-Las 6 pantallas desplazables quedaron verificadas con la fuente del sistema en Largest.
+| Pantalla | 192dp (emu) | 203dp (Galaxy Watch 6 **real**) | 227dp (emu) |
+|----------|-------------|--------------------------------|-------------|
+| Walkthrough — paso "Deshacer" (el que Google capturó) | ✅ | ✅ | ✅ |
+| Walkthrough — paso "Contador de golpes" (texto más largo) | ✅ | ✅ | ✅ |
+| Tutorial | ✅ | ✅ | — |
+| Ajustes | ✅ | ✅ | ✅ |
+| Nuevo partido | — | ✅ | ✅ |
+| Fin de partido | — | ✅ | ✅ |
+| Companion prompt | ✅ | — | ✅ |
+| Barra de desplazamiento durante scroll | ✅ | — | ✅ |
+
+**El Galaxy Watch 6 40mm real es 432x432 @ 340dpi = 203dp**, no 216dp como se había calculado
+asumiendo 320dpi. Queda entre los dos emuladores, así que el rango 192–227dp lo cubre por
+ambos lados.
+
+Para capturar pantallas puntuales sin navegar (el swipe horizontal de la app lo intercepta
+Wear OS como gesto de "atrás", tanto en emulador como en hardware) y **sin borrar los datos
+del reloj**, se compiló un debug temporal que acepta la pantalla inicial por extra del intent
+(`am start ... --es screen TUTORIAL`). Los cambios se revirtieron y el working tree quedó
+limpio.
+
+Detalle menor, no bloqueante: en el paso 0 del walkthrough —el único con la pelota de 48dp— el
+"Tocá para continuar" queda fuera de la vista inicial con la fuente en Largest. Es contenido
+desplazable con su barra visible, no texto recortado, así que no es la infracción que marcó
+Play.
 
 ### Verificación en hardware
 

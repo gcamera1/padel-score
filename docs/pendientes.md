@@ -425,10 +425,22 @@ afuera solo para el test. Ya está documentado en el header de `CounterScreensho
 
 ## 6. Housekeeping local
 
-- **Desinstalar del reloj el APK de prueba.** El instalado en el Galaxy Watch 6 está firmado
-  con la **debug keystore** (bundletool la usó para poder instalarlo local). Play **no puede
-  actualizar sobre una firma distinta**: hay que desinstalarlo antes de bajar la app de la
-  tienda, o el error no va a ser claro.
+Cerrado el 03/08/2026:
+
+- ✅ **Fuente del reloj** de vuelta en Normal (`font_scale = 1.0`).
+- ✅ **APK limpio reinstalado** en el Galaxy Watch 6, sin el mecanismo temporal de
+  verificación. Comprobado funcionalmente: `am start ... --es screen TUTORIAL` ya no tiene
+  efecto y abre el marcador.
+- ✅ **La pelota con fuente normal**: verificada en el reloj real, se muestra a 48dp y todo el
+  paso 0 del walkthrough entra sin scrollear. El caso de todos los días no cambió.
+- Nunca se usó `pm clear` en el reloj real, así que la configuración y el historial quedaron
+  intactos en todo el proceso.
+
+Pendiente:
+
+- **Desinstalar del reloj el APK de debug antes de bajar la app de Play.** El instalado está
+  firmado con la **debug keystore**, y Play **no puede actualizar sobre una firma distinta**:
+  el error que aparece no es claro sobre la causa.
 - **`release-artifacts/padel-wear-v1.0.0-vc11.aab`** quedó de una tanda anterior, con el
   esquema de versionCode viejo. Se puede borrar.
 - **El video del foreground service** tiene que seguir accesible en YouTube como **No

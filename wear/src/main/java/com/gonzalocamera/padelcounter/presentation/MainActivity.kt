@@ -138,7 +138,7 @@ internal fun roundSafeContentPadding(sideFraction: Float = 0.12f): PaddingValues
 internal fun walkthroughBallSize(): Dp {
     val fontScale = LocalConfiguration.current.fontScale
     return when {
-        fontScale >= 1.25f -> 24.dp
+        fontScale >= 1.25f -> 0.dp     // se oculta: el texto tiene prioridad
         fontScale >= 1.1f -> 34.dp
         else -> 48.dp
     }
@@ -1198,15 +1198,15 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            if (s.showBall) {
-                                // La pelota se achica cuando el usuario agranda la fuente:
-                                // con Largest, sus 48dp empujaban el "Tocá para continuar"
-                                // fuera de la vista inicial. El texto tiene prioridad sobre
-                                // el adorno (WO-V1).
+                            // La pelota se achica —y con la fuente en Largest se oculta—
+                            // porque sus 48dp empujaban el "Tocá para continuar" fuera de la
+                            // vista inicial. El texto tiene prioridad sobre el adorno (WO-V1).
+                            val ballSize = walkthroughBallSize()
+                            if (s.showBall && ballSize > 0.dp) {
                                 Image(
                                     painter = painterResource(id = R.drawable.padelball),
                                     contentDescription = null,
-                                    modifier = Modifier.size(walkthroughBallSize())
+                                    modifier = Modifier.size(ballSize)
                                 )
                             }
 

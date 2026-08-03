@@ -1256,7 +1256,9 @@ private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
                     )
                 },
             state = listState,
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+            // Textos explicativos largos: con 8dp de padding lateral se cortaban contra
+            // el borde curvo al escalar la fuente del sistema (WO-V1).
+            contentPadding = roundSafeContentPadding(),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             item { Text("Tutorial", fontWeight = FontWeight.Bold, color = WearBrand.Gold) }

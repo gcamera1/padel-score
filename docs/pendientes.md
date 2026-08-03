@@ -61,9 +61,21 @@ emulador captura el framebuffer cuadrado, sin el recorte que sí hace el hardwar
 También se verificó que **el tap sigue avanzando el walkthrough**: al pasar a
 `ScalingLazyColumn` existía el riesgo de que la lista consumiera el gesto del `Box` padre.
 
-**Sin verificar todavía:** `MatchFinishedScreen`, `NewMatchScreen` y `TutorialScreen`.
-Comparten el mismo fix (`initialCenterItemIndex = 0` + `roundSafeContentPadding`), pero no se
-recorrieron una por una con la fuente en Largest.
+Segunda pasada, con las pantallas restantes:
+
+| Pantalla | Resultado |
+|----------|-----------|
+| Nuevo partido (arriba y scrolleado) | ✅ título y chips completos, barra de desplazamiento visible |
+| Nuevo partido (final) | ✅ "Arrancar" y "Cancelar" completos |
+| Fin de partido | ✅ "Ganaste!", sets y resultado completos, contenido centrado |
+| Fin de partido (scrolleado) | ✅ "Jugar de nuevo" y "Nuevo partido" completos, con barra |
+
+**`TutorialScreen` quedó sin verificar en el emulador**, no por la app sino por la
+automatización: llegar ahí requiere el swipe horizontal de la app, y el emulador lo intercepta
+como gesto de "atrás" del sistema y cierra la app. Se le aplicó el mismo
+`roundSafeContentPadding()` porque tenía 8dp de padding lateral con textos explicativos
+largos — el caso exacto que se cortaba. Verificarlo en el reloj real toma segundos:
+Ajustes → Tutorial con la fuente en Largest.
 
 ### Verificación en hardware
 

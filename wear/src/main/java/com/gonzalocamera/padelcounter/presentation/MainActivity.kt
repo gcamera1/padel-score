@@ -120,8 +120,9 @@ internal fun roundSafeSidePadding(): Dp {
  * superior. Una vez que el usuario scrollea, `Modifier.scrollAway` esconde el reloj.
  */
 @Composable
-internal fun roundSafeContentPadding(): PaddingValues {
-    val side = roundSafeSidePadding()
+internal fun roundSafeContentPadding(sideFraction: Float = 0.12f): PaddingValues {
+    val config = LocalConfiguration.current
+    val side = if (config.isScreenRound) (config.screenWidthDp * sideFraction).dp else 12.dp
     return PaddingValues(start = side, end = side, top = 40.dp, bottom = 30.dp)
 }
 
@@ -1262,9 +1263,11 @@ private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
                     )
                 },
             state = listState,
-            // Textos explicativos largos: con 8dp de padding lateral se cortaban contra
-            // el borde curvo al escalar la fuente del sistema (WO-V1).
-            contentPadding = roundSafeContentPadding(),
+            // Textos explicativos largos y alineados a la izquierda: cada línea arranca en
+            // el mismo x, así que en la zona baja del círculo —donde el ancho se angosta—
+            // se comían la primera letra. Necesitan más margen que el texto centrado del
+            // resto de la app (WO-V1).
+            contentPadding = roundSafeContentPadding(sideFraction = 0.17f),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             item { Text("Tutorial", fontWeight = FontWeight.Bold, color = WearBrand.Gold) }

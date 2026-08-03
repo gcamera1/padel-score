@@ -2,16 +2,16 @@
 
 Estado al **3 de agosto de 2026**.
 
-## ⚠️ Google rechazó la v1.0.0 de Wear OS (3 ago 2026)
+## Google rechazó la v1.0.0 de Wear OS (3 ago 2026) — ✅ RESUELTO
 
-Tres violaciones de las Wear OS app quality guidelines. Las tres están **corregidas en el
-branch `chore/target-sdk-bump`**, pero **falta verificarlas en hardware** antes de reenviar.
+Tres violaciones de las Wear OS app quality guidelines. Las tres están **corregidas y
+verificadas en hardware** (Galaxy Watch 6 real) en el branch `chore/target-sdk-bump`.
 
 | Violación | Causa real | Estado |
 |-----------|-----------|--------|
-| **Tamaño de fuente de Wear** (WO-V1) | `WalkthroughScreen` era un `Column` sin scroll, sin padding lateral y con `\n` hardcodeados. Con la fuente del sistema en Largest (1.3) el contenido no entraba y se cortaba contra el borde curvo. | Corregido, sin verificar en reloj |
-| **La funcionalidad no se comporta según lo descrito** | Misma causa que la anterior: "textos sin cortes cuando se selecciona un tamaño de fuente grande". | Corregido, sin verificar en reloj |
-| **Falta la barra de desplazamiento** (WO-V8) | `MatchFinishedScreen` y `CompanionPromptScreen` tenían `positionIndicator = { }` vacío. | Corregido, sin verificar en reloj |
+| **Tamaño de fuente de Wear** (WO-V1) | `WalkthroughScreen` era un `Column` sin scroll, sin padding lateral y con `\n` hardcodeados. Con la fuente del sistema en Largest (1.3) el contenido no entraba y se cortaba contra el borde curvo. | ✅ verificado en reloj |
+| **La funcionalidad no se comporta según lo descrito** | Misma causa que la anterior: "textos sin cortes cuando se selecciona un tamaño de fuente grande". | ✅ verificado en reloj |
+| **Falta la barra de desplazamiento** (WO-V8) | `MatchFinishedScreen` y `CompanionPromptScreen` tenían `positionIndicator = { }` vacío. | ✅ verificado en reloj |
 
 Las capturas de evidencia que mandó Google fueron el paso "Deshacer" del walkthrough y la
 pantalla del companion prompt — las dos pantallas exactas que estaban anotadas en la sección
@@ -139,23 +139,24 @@ del reloj**, se compiló un debug temporal que acepta la pantalla inicial por ex
 (`am start ... --es screen TUTORIAL`). Los cambios se revirtieron y el working tree quedó
 limpio.
 
-### El paso 0 del walkthrough: mejorado, con un límite geométrico
+### El paso 0 del walkthrough: resuelto ocultando la pelota
 
 Con la fuente en Largest, los 48dp fijos de la pelota empujaban el "Tocá para continuar"
-**fuera de la vista inicial**. La pelota pasa a escalar en sentido inverso a la fuente (34dp
-desde `fontScale 1.1`, 24dp desde 1.25) y con eso el texto **ya aparece** en el Watch 6 real.
+**fuera de la vista inicial**. `walkthroughBallSize()` la escala en sentido inverso a la fuente:
+48dp normal, 34dp desde `fontScale 1.1`, y **se oculta desde 1.25**.
 
-Queda al ras del borde: la última letra roza la curva. La causa es geométrica y no se arregla
-con padding — se probó bajando el `top` del contentPadding y el spacing, sin ningún efecto. El
-texto cae en la franja baja del círculo, donde a esa altura el ancho disponible es de ~98dp
-(√(R²−y²) con R=101dp, y≈89dp) y "Tocá para continuar" a 13sp mide más que eso. Para que
-entrara habría que acortar el texto o dejar que haga wrap en dos líneas, lo que lo empujaría
-más abajo todavía.
+El mecanismo es un **umbral**, no "ganar espacio", y esto importa para no repetir intentos
+fallidos: el `Arrangement` está en `CenterVertically`, así que al dejar de ocupar esos ~32dp el
+contenido pasa a caber en la pantalla, se centra, y el texto de acción sube a una franja más
+ancha del círculo. Por eso:
 
-Se deja así: el texto se lee, hay barra de desplazamiento, y un scroll mínimo lo muestra
-completo. No es la infracción que marcó Play —que era texto recortado en un layout **sin**
-posibilidad de scroll—, y es un caso de borde extremo: fuente máxima del sistema en el reloj
-más chico.
+- Bajar el `top` del contentPadding de 40 a 30dp y el spacing de 8 a 6dp **no cambió nada** (la
+  captura salió idéntica): el contenido seguía sin caber, así que seguía anclado arriba.
+- Achicar la pelota a 24dp hizo aparecer el texto, pero con la última letra al ras de la curva.
+- Ocultarla cruzó el umbral y el texto entró **completo y con margen**.
+
+Verificado en el Galaxy Watch 6 real con `font_scale = 1.3`. Con fuente normal la pelota sigue
+en 48dp, así que el uso de todos los días no cambia.
 
 ### Verificación en hardware
 

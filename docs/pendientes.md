@@ -139,10 +139,23 @@ del reloj**, se compiló un debug temporal que acepta la pantalla inicial por ex
 (`am start ... --es screen TUTORIAL`). Los cambios se revirtieron y el working tree quedó
 limpio.
 
-Detalle menor, no bloqueante: en el paso 0 del walkthrough —el único con la pelota de 48dp— el
-"Tocá para continuar" queda fuera de la vista inicial con la fuente en Largest. Es contenido
-desplazable con su barra visible, no texto recortado, así que no es la infracción que marcó
-Play.
+### El paso 0 del walkthrough: mejorado, con un límite geométrico
+
+Con la fuente en Largest, los 48dp fijos de la pelota empujaban el "Tocá para continuar"
+**fuera de la vista inicial**. La pelota pasa a escalar en sentido inverso a la fuente (34dp
+desde `fontScale 1.1`, 24dp desde 1.25) y con eso el texto **ya aparece** en el Watch 6 real.
+
+Queda al ras del borde: la última letra roza la curva. La causa es geométrica y no se arregla
+con padding — se probó bajando el `top` del contentPadding y el spacing, sin ningún efecto. El
+texto cae en la franja baja del círculo, donde a esa altura el ancho disponible es de ~98dp
+(√(R²−y²) con R=101dp, y≈89dp) y "Tocá para continuar" a 13sp mide más que eso. Para que
+entrara habría que acortar el texto o dejar que haga wrap en dos líneas, lo que lo empujaría
+más abajo todavía.
+
+Se deja así: el texto se lee, hay barra de desplazamiento, y un scroll mínimo lo muestra
+completo. No es la infracción que marcó Play —que era texto recortado en un layout **sin**
+posibilidad de scroll—, y es un caso de borde extremo: fuente máxima del sistema en el reloj
+más chico.
 
 ### Verificación en hardware
 

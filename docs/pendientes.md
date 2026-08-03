@@ -1,6 +1,57 @@
 # Pendientes — Simple Padel Score
 
-Estado al **2 de agosto de 2026**.
+Estado al **3 de agosto de 2026**.
+
+## ⚠️ Google rechazó la v1.0.0 de Wear OS (3 ago 2026)
+
+Tres violaciones de las Wear OS app quality guidelines. Las tres están **corregidas en el
+branch `chore/target-sdk-bump`**, pero **falta verificarlas en hardware** antes de reenviar.
+
+| Violación | Causa real | Estado |
+|-----------|-----------|--------|
+| **Tamaño de fuente de Wear** (WO-V1) | `WalkthroughScreen` era un `Column` sin scroll, sin padding lateral y con `\n` hardcodeados. Con la fuente del sistema en Largest (1.3) el contenido no entraba y se cortaba contra el borde curvo. | Corregido, sin verificar en reloj |
+| **La funcionalidad no se comporta según lo descrito** | Misma causa que la anterior: "textos sin cortes cuando se selecciona un tamaño de fuente grande". | Corregido, sin verificar en reloj |
+| **Falta la barra de desplazamiento** (WO-V8) | `MatchFinishedScreen` y `CompanionPromptScreen` tenían `positionIndicator = { }` vacío. | Corregido, sin verificar en reloj |
+
+Las capturas de evidencia que mandó Google fueron el paso "Deshacer" del walkthrough y la
+pantalla del companion prompt — las dos pantallas exactas que estaban anotadas en la sección
+"Detalles menores" de este documento y se habían dejado sin arreglar.
+
+### Qué se cambió
+
+- **`WalkthroughScreen`** pasó de `Column` fijo a `ScalingLazyColumn`. No fue solo por el
+  scroll: en pantalla redonda, el ancho disponible a una distancia `y` del centro es
+  √(R²−y²), así que un padding lateral fijo no evita el corte — cualquier línea que scrollee
+  hacia los extremos se recorta. `ScalingLazyColumn` escala y desvanece los items contra el
+  borde, que es el patrón que espera Wear OS. Se sacaron los `\n` hardcodeados y se agregó
+  padding lateral del 12%.
+- La lista queda **fuera** del `AnimatedContent` a propósito: durante la transición habría
+  dos listas montadas compartiendo el mismo `ScalingLazyListState`. Se anima el bloque de
+  texto, no la lista.
+- **`PositionIndicator` real** en `MatchFinishedScreen` y `CompanionPromptScreen`.
+- **`Modifier.scrollAway(listState)`** en el `TimeText` de las 5 pantallas desplazables —
+  resuelve además el título pasando por debajo del reloj del sistema.
+
+### Lo que falta: verificación en hardware
+
+Los screenshot tests **no pueden cubrir esto**: las tres pantallas involucradas usan
+`ScalingLazyColumn`, que renderiza vacío en Paparazzi. Se agregó un test de `fontScale = 1.3`
+sobre `CounterScreen` (que sí renderiza y pasa), pero el walkthrough y las dos pantallas del
+rechazo hay que verificarlas en el reloj:
+
+```bash
+adb shell settings put system font_scale 1.3   # Largest
+adb shell pm clear com.gonzalocamera.padelcounter   # fuerza el walkthrough
+# recorrer los 8 pasos del walkthrough, ajustes, nuevo partido, fin de partido y
+# el companion prompt, confirmando que no hay texto cortado y que se ve la barra
+adb shell settings put system font_scale 1.0   # dejarlo como estaba
+```
+
+Google avisa además: *"Este problema también puede encontrarse en otras ubicaciones.
+Comprueba todas las áreas de tu aplicación cuando lo corrijas"*. Hay que recorrer **todas**
+las pantallas con la fuente en Largest, no solo las dos señaladas.
+
+---
 
 ## Estado actual de la publicación
 

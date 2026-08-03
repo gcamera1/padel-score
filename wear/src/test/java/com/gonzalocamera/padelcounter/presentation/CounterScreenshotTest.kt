@@ -102,7 +102,7 @@ private val PIXEL_WATCH = DeviceConfig(
 )
 
 /** Galaxy Watch 40mm — 198dp, round. */
-private val GALAXY_WATCH_40MM = DeviceConfig(
+private val GALAXY_WATCH_4_40MM = DeviceConfig(
     screenWidth = 792, screenHeight = 792,
     density = Density.XXXHIGH,
     screenRound = ScreenRound.ROUND
@@ -133,9 +133,30 @@ class CounterScreenshot_PixelWatch {
     @Test fun matchPoint() = paparazzi.snapshotCounter(MATCH_POINT_STATE)
 }
 
+/**
+ * WO-V1: la app debe respetar el tamaño de fuente del sistema sin que el texto ni los
+ * controles queden cortados por los bordes de la pantalla. Wear OS escala hasta 1.3
+ * (Largest), así que se captura el peor caso: la fuente más grande en el reloj más chico.
+ *
+ * Google rechazó la v1.0.0 por esto. La pantalla que señaló fue el walkthrough, que se
+ * migró a `ScalingLazyColumn` y por eso NO se puede cubrir acá (renderiza vacío en
+ * Paparazzi) — esa se verifica en hardware. Este test cubre el marcador, que es la
+ * pantalla principal y la única con texto grande de tamaño fijo.
+ */
+class CounterScreenshot_LargestFont {
+    @get:Rule val paparazzi = Paparazzi(
+        deviceConfig = GALAXY_WATCH_4_40MM.copy(fontScale = 1.3f),
+        maxPercentDifference = CLOCK_TOLERANCE
+    )
+
+    @Test fun inGame_largestFont() = paparazzi.snapshotCounter(IN_GAME_STATE)
+
+    @Test fun starPointDecider_largestFont() = paparazzi.snapshotCounter(STARPOINT_DECIDER_STATE)
+}
+
 class CounterScreenshot_GalaxyWatch40mm {
     @get:Rule val paparazzi = Paparazzi(
-        deviceConfig = GALAXY_WATCH_40MM,
+        deviceConfig = GALAXY_WATCH_4_40MM,
         maxPercentDifference = CLOCK_TOLERANCE
     )
 

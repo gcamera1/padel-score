@@ -835,7 +835,7 @@ private fun SettingsScreen(
     val swipeThresholdPx = 110f
 
     Scaffold(
-        timeText = { TimeText() },
+        timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
         vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) }
     ) {
@@ -1041,47 +1041,64 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
         val showBall: Boolean = false
     )
 
+    // Sin saltos de línea hardcodeados: con el tamaño de fuente grande del sistema,
+    // un `\n` fuerza líneas que ya no caben y el texto se corta contra el borde
+    // curvo (WO-V1). Se deja que el wrap lo resuelva el ancho disponible.
     val steps = listOf(
         WalkthroughStep(
             title = "Simple Padel Score",
-            description = "Tu marcador de pádel\nen la muñeca",
+            description = "Tu marcador de pádel en la muñeca",
             showBall = true
         ),
         WalkthroughStep(
             title = "Elegí quién saca",
-            description = "Tocá arriba si saca el rival\nTocá abajo si sacás vos"
+            description = "Tocá arriba si saca el rival. Tocá abajo si sacás vos"
         ),
         WalkthroughStep(
             title = "Anotá puntos",
-            description = "Un toque = sumar punto\nDoble toque = restar punto"
+            description = "Un toque suma punto. Doble toque resta punto"
         ),
         WalkthroughStep(
             title = "Deshacer",
-            description = "Mantené presionado para\nvolver al estado anterior"
+            description = "Mantené presionado para volver al estado anterior"
         ),
         WalkthroughStep(
             title = "Navegación",
-            description = "Deslizá a la izquierda\npara abrir Ajustes"
+            description = "Deslizá a la izquierda para abrir Ajustes"
         ),
         WalkthroughStep(
             title = "Contador de golpes",
-            description = "Contamos tus golpes en el partido.\nUsá el reloj en la muñeca\nde la paleta"
+            description = "Contamos tus golpes en el partido. Usá el reloj en la muñeca de la paleta"
         ),
         WalkthroughStep(
             title = "También en tu teléfono",
-            description = "Instalá la app en el celu\npara guardar tu historial\ny ver estadísticas"
+            description = "Instalá la app en el celu para guardar tu historial y ver estadísticas"
         ),
         WalkthroughStep(
             title = "¡Listo!",
-            description = "Ya podés empezar\na anotar tu partido"
+            description = "Ya podés empezar a anotar tu partido"
         )
     )
     val totalSteps = steps.size
 
     val current = steps[step]
 
+    val listState = rememberScalingLazyListState()
+    // Cada paso arranca desde arriba: si el anterior quedó scrolleado (fuente grande),
+    // el nuevo no debe heredar ese offset.
+    LaunchedEffect(step) { listState.scrollToItem(0) }
+
+    // En pantalla redonda el ancho disponible depende de la altura: a una distancia `y`
+    // del centro el semi-ancho es √(R²-y²). Un padding lateral fijo no alcanza por sí
+    // solo, pero `ScalingLazyColumn` completa el trabajo: escala y desvanece los items
+    // cerca del borde en vez de recortarlos, que es el patrón que espera Wear OS.
+    val config = LocalConfiguration.current
+    val sidePadding = if (config.isScreenRound) (config.screenWidthDp * 0.12f).dp else 12.dp
+
     Scaffold(
-        timeText = { TimeText() }
+        timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
+        // WO-V8: toda vista desplazable tiene que mostrar su barra de desplazamiento.
+        positionIndicator = { PositionIndicator(scalingLazyListState = listState) }
     ) {
         Box(
             modifier = Modifier
@@ -1096,53 +1113,63 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
                 },
             contentAlignment = Alignment.Center
         ) {
-            AnimatedContent(
-                targetState = step,
-                transitionSpec = {
-                    (slideInHorizontally(initialOffsetX = { it }) + fadeIn()) togetherWith
-                        (slideOutHorizontally(targetOffsetX = { -it }) + fadeOut())
-                }
-            ) { currentStep ->
-                val s = steps[currentStep]
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Spacer(Modifier.weight(1f))
+            // Con la fuente del sistema en Largest el contenido no entra en la pantalla.
+            // `ScalingLazyColumn` lo hace desplazable y escala los items contra el borde
+            // curvo en vez de recortarlos — el motivo del rechazo de Play (WO-V1).
+            //
+            // La lista vive FUERA del `AnimatedContent` a propósito: durante la transición
+            // habría dos listas montadas a la vez compartiendo el mismo `listState`, que
+            // es un estado de una sola lista. Se anima el bloque de texto, no la lista.
+            ScalingLazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                contentPadding = PaddingValues(horizontal = sidePadding, vertical = 26.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
+            ) {
+                item {
+                    AnimatedContent(
+                        targetState = step,
+                        transitionSpec = {
+                            (slideInHorizontally(initialOffsetX = { it }) + fadeIn()) togetherWith
+                                (slideOutHorizontally(targetOffsetX = { -it }) + fadeOut())
+                        }
+                    ) { currentStep ->
+                        val s = steps[currentStep]
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = s.title,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = WearBrand.Gold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
 
-                    // Titulo
-                    Text(
-                        text = s.title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = WearBrand.Gold,
-                        textAlign = TextAlign.Center
-                    )
+                            if (s.showBall) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.padelball),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
 
-                    Spacer(Modifier.height(8.dp))
-
-                    // Pelota en el paso de bienvenida
-                    if (s.showBall) {
-                        Image(
-                            painter = painterResource(id = R.drawable.padelball),
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = s.description,
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
+                }
 
-                    // Descripcion
-                    Text(
-                        text = s.description,
-                        fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.8f),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(Modifier.weight(1f))
-
-                    // Indicador de progreso (dots)
+                // Indicador de progreso (dots)
+                item {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -1150,26 +1177,26 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
                         repeat(totalSteps) { i ->
                             Box(
                                 modifier = Modifier
-                                    .size(if (i == currentStep) 6.dp else 4.dp)
+                                    .size(if (i == step) 6.dp else 4.dp)
                                     .clip(RoundedCornerShape(50))
                                     .background(
-                                        if (i == currentStep) WearBrand.Gold
+                                        if (i == step) WearBrand.Gold
                                         else WearBrand.TextFaint.copy(alpha = 0.5f)
                                     )
                             )
                         }
                     }
+                }
 
-                    Spacer(Modifier.height(4.dp))
-
-                    // Texto de accion
+                // Texto de accion
+                item {
                     Text(
-                        text = if (currentStep < totalSteps - 1) "Tocá para continuar" else "Tocá para empezar",
+                        text = if (step < totalSteps - 1) "Tocá para continuar" else "Tocá para empezar",
                         fontSize = 10.sp,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = Color.White.copy(alpha = 0.5f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
-
-                    Spacer(Modifier.height(8.dp))
                 }
             }
         }
@@ -1184,7 +1211,7 @@ private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
     val swipeThresholdPx = 110f
 
     Scaffold(
-        timeText = { TimeText() },
+        timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
         vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) }
     ) {
@@ -1243,7 +1270,7 @@ private fun NewMatchScreen(
     val listState = rememberScalingLazyListState()
 
     Scaffold(
-        timeText = { TimeText() },
+        timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
         vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) }
     ) {
@@ -1366,13 +1393,17 @@ private fun MatchFinishedScreen(
 ) {
     val won = state.mySets > state.oppSets
     val winnerText = if (won) "Ganaste!" else "Perdiste"
+    val listState = rememberScalingLazyListState()
 
     Scaffold(
-        timeText = { TimeText() },
-        positionIndicator = { }
+        timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
+        // WO-V8: con `positionIndicator = { }` la lista no mostraba barra de
+        // desplazamiento, y Play rechazó la v1.0.0 justamente por eso.
+        positionIndicator = { PositionIndicator(scalingLazyListState = listState) }
     ) {
         ScalingLazyColumn(
             modifier = Modifier.fillMaxSize(),
+            state = listState,
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 26.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically)
@@ -1454,14 +1485,19 @@ private fun CompanionPromptScreen(
         "Vinculá tu reloj a un teléfono con Simple Padel Score para guardar tu historial y estadísticas."
     }
 
+    val listState = rememberScalingLazyListState()
+
     Scaffold(
-        timeText = { TimeText() },
-        positionIndicator = { }
+        timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
+        // WO-V8: ésta es la pantalla que Google capturó como evidencia de "falta la
+        // barra de desplazamiento" — tenía `positionIndicator = { }`.
+        positionIndicator = { PositionIndicator(scalingLazyListState = listState) }
     ) {
         ScalingLazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black),
+            state = listState,
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 26.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)

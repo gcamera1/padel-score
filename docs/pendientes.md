@@ -32,7 +32,40 @@ pantalla del companion prompt — las dos pantallas exactas que estaban anotadas
 - **`Modifier.scrollAway(listState)`** en el `TimeText` de las 5 pantallas desplazables —
   resuelve además el título pasando por debajo del reloj del sistema.
 
-### Lo que falta: verificación en hardware
+### La causa de fondo no era el padding
+
+El corte del título no venía del `contentPadding` sino de
+**`rememberScalingLazyListState()`**, cuyo default es `initialCenterItemIndex = 1`: la lista
+arranca centrando el **segundo** item, así que el primero —el título— queda arriba, debajo del
+`TimeText` y recortado contra el borde superior. Se probó primero con más padding lateral (12%
+y 15%) y con más padding vertical, y en las dos el título seguía cortado.
+
+El fix es `rememberScalingLazyListState(initialCenterItemIndex = 0)`, aplicado a **las 6
+listas** del módulo. Eso corrigió de una vez el walkthrough, el companion prompt y también
+Ajustes, que tenía el mismo defecto sin haber sido señalado por Google.
+
+### Verificado en emulador de Wear OS (API 36, 454x454 @ 320dpi = 227dp)
+
+Con `font_scale = 1.3` (Largest) y aplicando por software la máscara circular del reloj — el
+emulador captura el framebuffer cuadrado, sin el recorte que sí hace el hardware:
+
+| Pantalla | Resultado |
+|----------|-----------|
+| Walkthrough paso "Deshacer" (el que Google capturó) | ✅ título, descripción y "Tocá para continuar" completos |
+| Walkthrough paso "Contador de golpes" (texto más largo, 4 líneas) | ✅ completo |
+| Companion prompt (el que Google capturó) | ✅ título completo debajo del reloj; el botón se alcanza scrolleando |
+| Companion prompt durante el scroll | ✅ **barra de desplazamiento visible** (WO-V8) y `scrollAway` esconde el reloj |
+| Ajustes | ✅ título completo; el botón largo usa elipsis, no se corta contra el borde |
+| Toda la sesión | ✅ sin crashes ni excepciones en logcat |
+
+También se verificó que **el tap sigue avanzando el walkthrough**: al pasar a
+`ScalingLazyColumn` existía el riesgo de que la lista consumiera el gesto del `Box` padre.
+
+**Sin verificar todavía:** `MatchFinishedScreen`, `NewMatchScreen` y `TutorialScreen`.
+Comparten el mismo fix (`initialCenterItemIndex = 0` + `roundSafeContentPadding`), pero no se
+recorrieron una por una con la fuente en Largest.
+
+### Verificación en hardware
 
 Los screenshot tests **no pueden cubrir esto**: las tres pantallas involucradas usan
 `ScalingLazyColumn`, que renderiza vacío en Paparazzi. Se agregó un test de `fontScale = 1.3`

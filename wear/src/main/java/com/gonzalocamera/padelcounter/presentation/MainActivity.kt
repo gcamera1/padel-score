@@ -94,6 +94,36 @@ internal data class ScreenMetrics(
     val hintEndPadding: Dp
 )
 
+/**
+ * Padding lateral seguro para pantallas de texto en un reloj redondo.
+ *
+ * En pantalla redonda el ancho disponible depende de la altura: a una distancia `y` del
+ * centro el semi-ancho es √(R²−y²). Un padding chico y fijo (8-10dp) alcanza con la fuente
+ * por defecto, pero con la fuente del sistema en Largest el texto crece, se acerca al borde
+ * curvo y se corta — Play rechazó la v1.0.0 por esto (WO-V1).
+ *
+ * El 12% del ancho deja margen suficiente y, combinado con `ScalingLazyColumn`, cubre
+ * también las líneas que scrollean hacia los extremos.
+ */
+@Composable
+internal fun roundSafeSidePadding(): Dp {
+    val config = LocalConfiguration.current
+    return if (config.isScreenRound) (config.screenWidthDp * 0.12f).dp else 12.dp
+}
+
+/**
+ * `contentPadding` para las listas de texto del reloj.
+ *
+ * El `top` es mayor que el `bottom` a propósito: en la posición inicial del scroll, el
+ * primer item quedaría por debajo del `TimeText` del Scaffold y recortado contra el borde
+ * superior. Una vez que el usuario scrollea, `Modifier.scrollAway` esconde el reloj.
+ */
+@Composable
+internal fun roundSafeContentPadding(): PaddingValues {
+    val side = roundSafeSidePadding()
+    return PaddingValues(start = side, end = side, top = 40.dp, bottom = 30.dp)
+}
+
 @Composable
 internal fun rememberScreenMetrics(): ScreenMetrics {
     val config = LocalConfiguration.current
@@ -829,7 +859,7 @@ private fun SettingsScreen(
     onInstallPhoneApp: () -> Unit,
     onBack: () -> Unit
 ) {
-    val listState = rememberScalingLazyListState()
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
     val haptic = LocalHapticFeedback.current
     var swipeDragAccum by remember { mutableStateOf(0f) }
     val swipeThresholdPx = 110f
@@ -1083,17 +1113,11 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
 
     val current = steps[step]
 
-    val listState = rememberScalingLazyListState()
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
     // Cada paso arranca desde arriba: si el anterior quedó scrolleado (fuente grande),
     // el nuevo no debe heredar ese offset.
     LaunchedEffect(step) { listState.scrollToItem(0) }
 
-    // En pantalla redonda el ancho disponible depende de la altura: a una distancia `y`
-    // del centro el semi-ancho es √(R²-y²). Un padding lateral fijo no alcanza por sí
-    // solo, pero `ScalingLazyColumn` completa el trabajo: escala y desvanece los items
-    // cerca del borde en vez de recortarlos, que es el patrón que espera Wear OS.
-    val config = LocalConfiguration.current
-    val sidePadding = if (config.isScreenRound) (config.screenWidthDp * 0.12f).dp else 12.dp
 
     Scaffold(
         timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
@@ -1124,7 +1148,7 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
                 horizontalAlignment = Alignment.CenterHorizontally,
-                contentPadding = PaddingValues(horizontal = sidePadding, vertical = 26.dp),
+                contentPadding = roundSafeContentPadding(),
                 verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
             ) {
                 item {
@@ -1205,7 +1229,7 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
 
 @Composable
 private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
-    val listState = rememberScalingLazyListState()
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
     val haptic = LocalHapticFeedback.current
     var swipeDragAccum by remember { mutableStateOf(0f) }
     val swipeThresholdPx = 110f
@@ -1267,7 +1291,7 @@ private fun NewMatchScreen(
     var decider by remember { mutableStateOf(initialDecider) }
     var bestOf by remember { mutableStateOf(initialBestOf) }
 
-    val listState = rememberScalingLazyListState()
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
 
     Scaffold(
         timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
@@ -1393,7 +1417,7 @@ private fun MatchFinishedScreen(
 ) {
     val won = state.mySets > state.oppSets
     val winnerText = if (won) "Ganaste!" else "Perdiste"
-    val listState = rememberScalingLazyListState()
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
 
     Scaffold(
         timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
@@ -1405,7 +1429,7 @@ private fun MatchFinishedScreen(
             modifier = Modifier.fillMaxSize(),
             state = listState,
             horizontalAlignment = Alignment.CenterHorizontally,
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 26.dp),
+            contentPadding = roundSafeContentPadding(),
             verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically)
         ) {
             item {
@@ -1485,7 +1509,7 @@ private fun CompanionPromptScreen(
         "Vinculá tu reloj a un teléfono con Simple Padel Score para guardar tu historial y estadísticas."
     }
 
-    val listState = rememberScalingLazyListState()
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
 
     Scaffold(
         timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
@@ -1499,7 +1523,7 @@ private fun CompanionPromptScreen(
                 .background(Color.Black),
             state = listState,
             horizontalAlignment = Alignment.CenterHorizontally,
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 26.dp),
+            contentPadding = roundSafeContentPadding(),
             verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)
         ) {
             item {

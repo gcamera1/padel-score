@@ -184,12 +184,31 @@ las pantallas con la fuente en Largest, no solo las dos señaladas.
 | Artefacto | versionCode | versionName | targetSdk | Estado |
 |-----------|-------------|-------------|-----------|--------|
 | mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (publicado 30/07/2026) |
-| wear | 340100003 | 1.0.0 | 34 | **En revisión** — Envío 11, 01/08/2026 01:37 |
-| mobile | 360110000 | 1.1.0 | 36 | Sin publicar — branch `chore/target-sdk-bump` |
-| wear | 350110003 | 1.1.0 | 35 | Sin publicar — branch `chore/target-sdk-bump` |
+| wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) → "Sustituida por otra versión" |
+| wear | **350110003** | **1.1.0** | **35** | **En revisión** — Envío 12, 03/08/2026 13:34 |
+| mobile | 360110000 | 1.1.0 | 36 | Sin subir — listo en `chore/target-sdk-bump` |
 
-La release de reloj 1.0.0 va a producción al 100% en 177 países. Con *Publicación gestionada
-desactivada*, se publica automáticamente en cuanto Google la apruebe (plazo estimado: 7 días).
+Con *Publicación gestionada desactivada*, la 350110003 se publica automáticamente al 100% en
+los 177 países en cuanto Google la apruebe (plazo estimado: 7 días).
+
+El Envío 12 incluyó dos cambios más la declaración de servicios en primer plano:
+
+1. Producción (Wear OS) → 350110003 → lanzamiento completo
+2. Prueba cerrada (Wear OS) → pausar canal
+
+**Los dos canales de prueba quedaron pausados** para sacar de circulación los bundles con
+targetSdk 34, como pide la remediación de Play (*"actualiza también esos canales"*):
+
+- **Prueba interna**: tenía el 340100003 rechazado. Pausarla se aplica **de inmediato**, no
+  pasa por revisión — y eso conviene: si viajara en el envío, Google revisaría con el bundle
+  rechazado todavía activo. Reversible con "Reanudar canal".
+- **Prueba cerrada**: tenía el `vc5` del 31/03/2026. Acá el pausado **sí** queda pendiente y
+  viajó en el envío. Se descartó "Detener lanzamiento" porque hacía caer a los testers al
+  `vc4`, todavía más viejo, sin resolver nada.
+
+**El aviso de nivel de API de Wear OS sigue visible** después del envío. Es lo esperado: Play
+lo recalcula cuando la versión queda aprobada y publicada, no al enviarla. La página ahora
+muestra "Actualización en revisión".
 
 ---
 
@@ -419,29 +438,38 @@ afuera solo para el test. Ya está documentado en el header de `CounterScreensho
 
 ## Plan de releases
 
-Decidido el 02/08/2026. Tres publicaciones en secuencia, no todo junto:
+Replanificado el 03/08/2026: el rechazo del reloj adelantó su 1.1.0, así que la tanda del
+teléfono quedó sola.
 
-### Release 1 — Wear OS 1.0.0 (en curso)
+### Release 1 — Wear OS 1.1.0 · ✅ enviada (Envío 12, en revisión)
 
-`wear 340100003`, ya enviada. **Nada que hacer**: esperar la aprobación de Google. Se publica
-automáticamente al aprobarse.
+`wear 350110003`. **Nada que hacer**: esperar la aprobación. Se publica automáticamente.
+Incluyó los tres fixes del rechazo, el `targetSdk 35` y el pausado de los canales de prueba.
 
-### Release 2 — 1.1.0, ambos módulos (lista en el branch, sin subir)
+### Release 2 — `:mobile` 1.1.0 · ⏰ CON FECHA LÍMITE: 30 de agosto de 2026
 
-Se sube **después** de que Google apruebe la Release 1, para no encimar dos revisiones del
-mismo artefacto. Contenido:
+`mobile 360110000`, **ya listo en el branch `chore/target-sdk-bump`, sin subir**.
 
-- `targetSdk` 36 (mobile) y 35 (wear) → cierra el plazo del 31 de agosto (sección 1)
+Es lo próximo urgente. El Centro de políticas sigue marcando *"La aplicación debe estar
+orientada a Android 16 (nivel 36 de la API) o a una versión posterior — fecha límite 30 ago"*.
+Eso es el artefacto de teléfono, y el envío del reloj **no lo resuelve**. Pasada esa fecha no
+se pueden publicar actualizaciones del teléfono.
+
+Contenido, todo ya commiteado y con la suite en verde:
+
+- `targetSdk 36` → cierra ese plazo
 - migración de edge-to-edge → resuelve 2 de los 3 advisories de la consola (sección 1)
 - las features del 31/7 que nunca se publicaron: carga manual, compartir, backup (sección 2)
 - el cartel equivocado del companion, que se arregla solo al publicar mobile (sección 2)
 
-Antes de subirla, hacer también:
+Antes de subirla:
 
-- **Probar el edge-to-edge en el teléfono** — es lo único que ningún test cubre
-- **Sacar de circulación el bundle vc5** del canal de prueba cerrada, o el aviso de API de
-  Wear OS no se va (sección 1)
+- **Probar el edge-to-edge en el teléfono** — es lo único que ningún test cubre. Los tres
+  puntos de riesgo: Ajustes y el detalle de partido scrolleados hasta el fondo, y la hoja de
+  carga manual con el teclado abierto.
+- Generar el AAB: `./gradlew :mobile:bundleRelease` y archivarlo en `release-artifacts/`
 - Revisar el checklist de `publishing-guide.md` §9
+- Se sube al track de **teléfono** (el selector por defecto), no al de Wear OS
 
 ### Release 3 — migración de toolchain
 

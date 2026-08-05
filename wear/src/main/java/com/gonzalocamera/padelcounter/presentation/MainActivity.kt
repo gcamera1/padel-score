@@ -144,6 +144,47 @@ internal fun walkthroughBallSize(): Dp {
     }
 }
 
+/**
+ * Botón de ancho completo con una etiqueta de texto.
+ *
+ * Implementado con `Chip` y NO con `Button`: en Wear Material, `Button` es un botón **circular
+ * para iconos** — aplica `size(52.dp)` fijo y no reserva padding interno. Usado a lo ancho con
+ * texto, con la fuente del sistema en grande la etiqueta envuelve, se pega al borde redondeado
+ * de la píldora y pierde la primera y la última letra. Play rechazó por esto dos veces (WO-V1):
+ * se vio en "Recorrido guiado" (Tutorial) y en "Instalar en el teléfono" (fin de partido).
+ *
+ * `Chip` sí está pensado para texto: `defaultMinSize(52.dp).height(IntrinsicSize.Min)` lo hace
+ * crecer en alto cuando la etiqueta necesita más líneas, y `ChipDefaults.ContentPadding` deja
+ * 14dp a cada lado para que el texto nunca toque el borde.
+ *
+ * No usar `Button`/`OutlinedButton` con texto: son para iconos.
+ */
+@Composable
+internal fun WideTextButton(
+    text: String,
+    onClick: () -> Unit,
+    primary: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    val label: @Composable RowScope.() -> Unit = {
+        Text(text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+    }
+    if (primary) {
+        Chip(
+            label = label,
+            onClick = onClick,
+            colors = ChipDefaults.primaryChipColors(),
+            modifier = modifier.fillMaxWidth()
+        )
+    } else {
+        OutlinedChip(
+            label = label,
+            onClick = onClick,
+            modifier = modifier.fillMaxWidth()
+        )
+    }
+}
+
 @Composable
 internal fun rememberScreenMetrics(): ScreenMetrics {
     val config = LocalConfiguration.current
@@ -911,9 +952,7 @@ private fun SettingsScreen(
         ) {
             item { Text("Ajustes", fontWeight = FontWeight.Bold, color = WearBrand.Gold) }
 
-            item {
-                Button(onClick = onNewMatch, modifier = Modifier.fillMaxWidth()) { Text("Nuevo partido…") }
-            }
+            item { WideTextButton("Nuevo partido…", onNewMatch) }
 
             item { Text("Color de cancha") }
 
@@ -1047,26 +1086,12 @@ private fun SettingsScreen(
                         onChange = onStrokeSensitivityChange
                     )
                 }
-                item {
-                    OutlinedButton(onClick = onTestCounter, modifier = Modifier.fillMaxWidth()) { Text("Probar contador") }
-                }
+                item { WideTextButton("Probar contador", onTestCounter, primary = false) }
             }
 
-            item {
-                OutlinedButton(onClick = onTutorial, modifier = Modifier.fillMaxWidth()) { Text("Tutorial") }
-            }
-            item {
-                OutlinedButton(onClick = onInstallPhoneApp, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        "Instalar app en el teléfono",
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-            item {
-                OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
-            }
+            item { WideTextButton("Tutorial", onTutorial, primary = false) }
+            item { WideTextButton("Instalar app en el teléfono", onInstallPhoneApp, primary = false) }
+            item { WideTextButton("Volver", onBack, primary = false) }
             item {
                 // Del BuildConfig, no hardcodeado: estaba fijo en "v1.0.0" y con el bump
                 // a 1.1.0 la pantalla de Ajustes mostraba una versión equivocada.
@@ -1256,6 +1281,23 @@ private fun WalkthroughScreen(onFinish: () -> Unit) {
     }
 }
 
+/**
+ * Pasos del tutorial, deliberadamente cortos.
+ *
+ * Cada paso es un item de `ScalingLazyColumn`: mientras entre en 3 líneas con la fuente del
+ * sistema en grande, la lista puede escalarlo contra el borde curvo en vez de recortarlo. Los
+ * pasos 2, 4 y 7 se acortaron por eso — antes ocupaban 5 y 6 líneas.
+ */
+private val TUTORIAL_STEPS = listOf(
+    "1. Al iniciar, tocá arriba o abajo para elegir quién saca.",
+    "2. Un toque suma un punto: arriba el rival, abajo vos.",
+    "3. Doble toque resta un punto de ese lado.",
+    "4. Con ambos en 0 puntos, el doble toque resta un game.",
+    "5. Mantené presionado para deshacer.",
+    "6. La pelotita indica quién saca y de qué lado.",
+    "7. Deslizá: a la izquierda abrís Ajustes, a la derecha volvés."
+)
+
 @Composable
 private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
     val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
@@ -1285,29 +1327,32 @@ private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
                     )
                 },
             state = listState,
-            // Textos explicativos largos y alineados a la izquierda: cada línea arranca en
-            // el mismo x, así que en la zona baja del círculo —donde el ancho se angosta—
-            // se comían la primera letra. Necesitan más margen que el texto centrado del
-            // resto de la app (WO-V1).
-            contentPadding = roundSafeContentPadding(sideFraction = 0.17f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = roundSafeContentPadding(),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             item { Text("Tutorial", fontWeight = FontWeight.Bold, color = WearBrand.Gold) }
 
-            item { Text("1. Al iniciar, tocá arriba o abajo para elegir quién saca.", fontSize = 12.sp) }
-            item { Text("2. Un toque suma un punto al lado tocado (arriba = rival, abajo = vos).", fontSize = 12.sp) }
-            item { Text("3. Doble toque resta un punto de ese lado.", fontSize = 12.sp) }
-            item { Text("4. Si ambos están en 0 puntos, el doble toque resta un game del lado que se toque.", fontSize = 12.sp) }
-            item { Text("5. Mantené presionado para deshacer la última acción.", fontSize = 12.sp) }
-            item { Text("6. La pelotita indica quién saca y de qué lado.", fontSize = 12.sp) }
-            item { Text("7. Deslizá a la izquierda para Ajustes, a la derecha para volver.", fontSize = 12.sp) }
+            // Texto CENTRADO, no alineado a la izquierda. Con la fuente del sistema en grande
+            // cada paso ocupa 4-6 líneas: es un item de `ScalingLazyColumn` más alto que la
+            // pantalla, así que se dibuja a escala 1.0 y sus líneas de arriba y abajo caen en
+            // la curva del bisel. Alineadas a la izquierda todas arrancan en el mismo x y ahí
+            // perdían la primera letra ("saca." se leía "aca.", "rival" se leía "ival").
+            // Centradas, cada línea se angosta hacia el centro justo donde el círculo se
+            // angosta. Es también lo que recomienda la guía de diseño de Wear OS.
+            TUTORIAL_STEPS.forEach { step ->
+                item {
+                    Text(
+                        text = step,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
 
-            item {
-                Button(onClick = onWalkthrough, modifier = Modifier.fillMaxWidth()) { Text("Recorrido guiado") }
-            }
-            item {
-                OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
-            }
+            item { WideTextButton("Recorrido guiado", onWalkthrough) }
+            item { WideTextButton("Volver", onBack, primary = false) }
         }
     }
 }
@@ -1430,12 +1475,8 @@ private fun NewMatchScreen(
                 }
             }
 
-            item {
-                Button(onClick = { onConfirm(decider, scoringMode, bestOf) }, modifier = Modifier.fillMaxWidth()) { Text("Arrancar") }
-            }
-            item {
-                OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
-            }
+            item { WideTextButton("Arrancar", { onConfirm(decider, scoringMode, bestOf) }) }
+            item { WideTextButton("Cancelar", onCancel, primary = false) }
         }
     }
 }
@@ -1491,8 +1532,11 @@ private fun MatchFinishedScreen(
             }
             if (showCompanionHint) {
                 item {
+                    // Texto corto a propósito: el original tenía 75 caracteres y con la fuente
+                    // del sistema en grande ocupaba 5 líneas, así que las de abajo caían en la
+                    // curva del bisel y perdían la primera letra (WO-V1).
                     Text(
-                        text = "¿Querés guardar el historial de tus partidos? Instalá la app en tu teléfono.",
+                        text = "Guardá el historial en tu teléfono",
                         fontSize = 12.sp,
                         color = Color.White.copy(alpha = 0.75f),
                         textAlign = TextAlign.Center,
@@ -1501,11 +1545,7 @@ private fun MatchFinishedScreen(
                             .padding(horizontal = 6.dp, vertical = 4.dp)
                     )
                 }
-                item {
-                    OutlinedButton(onClick = onInstallPhoneApp, modifier = Modifier.fillMaxWidth(0.85f)) {
-                        Text("Instalar en el teléfono", fontSize = 13.sp)
-                    }
-                }
+                item { WideTextButton("Instalar en el teléfono", onInstallPhoneApp, primary = false) }
             }
             item {
                 Chip(
@@ -1536,12 +1576,14 @@ private fun CompanionPromptScreen(
     onDismiss: () -> Unit
 ) {
     val hasPhone = status == CompanionStatus.PHONE_NO_APP
-    // Mensajes cortos: en un reloj de 192dp con la fuente en Largest, un texto largo
-    // empuja el botón fuera de la vista inicial y hay que scrollear para accionarlo.
+    // Un solo texto, y corto, haciendo de título: con la fuente del sistema en grande el
+    // presupuesto vertical de un reloj de 192dp son ~122dp, y un título de dos líneas más un
+    // mensaje de dos líneas ya no dejaba lugar para el botón — quedaba cortado al ras del
+    // borde inferior en la vista inicial.
     val message = if (hasPhone) {
-        "Guardá tu historial instalando la app en tu teléfono"
+        "Instalá la app en tu teléfono"
     } else {
-        "Vinculá el reloj a un teléfono que tenga la app"
+        "Vinculá un teléfono con la app"
     }
 
     val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
@@ -1563,19 +1605,10 @@ private fun CompanionPromptScreen(
         ) {
             item {
                 Text(
-                    text = "También en tu teléfono",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = WearBrand.Gold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            item {
-                Text(
                     text = message,
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.75f),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = WearBrand.Gold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1583,17 +1616,9 @@ private fun CompanionPromptScreen(
                 )
             }
             if (hasPhone) {
-                item {
-                    Button(onClick = onInstall, modifier = Modifier.fillMaxWidth(0.85f)) {
-                        Text("Instalar en el teléfono", fontSize = 13.sp)
-                    }
-                }
+                item { WideTextButton("Instalar en el teléfono", onInstall) }
             }
-            item {
-                OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth(0.85f)) {
-                    Text(if (hasPhone) "Ahora no" else "Entendido", fontSize = 13.sp)
-                }
-            }
+            item { WideTextButton(if (hasPhone) "Ahora no" else "Entendido", onDismiss, primary = false) }
         }
     }
 }

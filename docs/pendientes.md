@@ -1,8 +1,101 @@
 # Pendientes — Simple Padel Score
 
-Estado al **3 de agosto de 2026**.
+Estado al **5 de agosto de 2026**.
 
-## Google rechazó la v1.0.0 de Wear OS (3 ago 2026) — ✅ RESUELTO
+## Segundo rechazo de Wear OS (5 ago 2026) — ✅ RESUELTO
+
+Google rechazó también el Envío 12 (bundle `350110003`), con **un solo motivo** y el mismo de
+antes:
+
+> Directrices de calidad de la aplicación de Wear OS: la funcionalidad no se comporta según lo
+> descrito — *"textos sin cortes cuando se selecciona un tamaño de fuente grande"*.
+
+La primera vuelta arregló el walkthrough, que era la pantalla que Google había capturado. Pero
+el defecto vivía en **otras dos pantallas que no se habían mirado con la fuente en grande**, y
+por dos causas distintas de la del walkthrough.
+
+### Causa 1 — `Button` de Wear Material NO es un botón de texto
+
+Es un botón **circular para iconos**. Su implementación (`RoundButton`, en
+`compose-material-core`) aplica `.size(52.dp)` — tamaño **fijo** — y no reserva padding
+interno; está pensado para un icono de 26dp. Usado a lo ancho con una etiqueta de texto, con la
+fuente del sistema en Largest la etiqueta envuelve y **pierde la primera y la última letra**
+contra el borde redondeado de la píldora:
+
+| Pantalla | Se veía |
+|----------|---------|
+| Tutorial → "Recorrido guiado" | `ecorrido` / `uiado` |
+| Fin de partido → "Instalar en el teléfono" | `nstalar en el` / `eléfono` |
+| Aviso companion → mismos botones | ídem |
+
+`Chip` / `ToggleChip`, en cambio, **sí** están hechos para texto:
+`defaultMinSize(minHeight = 52.dp).height(IntrinsicSize.Min)` los hace crecer en alto, y
+`ChipDefaults.ContentPadding` deja 14dp a cada lado. Se comprobó leyendo las fuentes de
+`androidx.wear.compose:compose-material:1.4.1` y se confirmó en el emulador: el chip "Nuevo
+partido / Cambiar opciones" ya renderizaba 4 líneas perfectas mientras los botones de al lado
+se cortaban.
+
+**Arreglo:** helper `WideTextButton` (en `MainActivity.kt`) que envuelve `Chip`/`OutlinedChip`,
+y se reemplazaron los 12 botones de texto de ancho completo de la app. Los dos `Button`
+circulares de 36dp de `StrokeTestScreen` se quedan como están: ahí sí son botones de icono.
+
+### Causa 2 — el Tutorial tenía texto alineado a la izquierda
+
+Cada paso era un item de `ScalingLazyColumn` de 4 a 6 líneas con la fuente en grande: un item
+**más alto que la pantalla**, así que se dibuja a escala 1.0 y sus líneas de arriba y de abajo
+caen en la curva del bisel. Alineadas a la izquierda todas arrancan en el mismo `x`, justo
+donde el círculo se angosta, y perdían la primera letra:
+
+```
+"saca."   ->  "aca."
+"rival,"  ->  "ival,"
+"un punto" -> "n punto"
+```
+
+El padding lateral del 17% que se le había puesto en la primera vuelta no alcanzaba: a `y=345`
+de 384 el semi-ancho visible es `√(192² − 153²) = 116px`, o sea hacen falta 76px de margen y
+había 65.
+
+**Arreglo:** texto **centrado** (`TextAlign.Center`) — cada línea se angosta hacia el centro
+justo donde el círculo se angosta, y es además lo que recomienda la guía de diseño de Wear OS
+para pantallas redondas. Los pasos 2, 4, 5 y 7 se acortaron para que ninguno pase de 3 líneas
+(constante `TUTORIAL_STEPS`). Vuelve al padding por defecto del 12%.
+
+### Causa 3 — textos largos en el aviso companion y el fin de partido
+
+- Fin de partido: el aviso de 75 caracteres ocupaba 5 líneas → "Guardá el historial en tu
+  teléfono" (34).
+- Aviso companion: título de 2 líneas + mensaje de 2 líneas + botón no entran en los ~122dp de
+  presupuesto vertical de un reloj de 192dp con la fuente al máximo. Se eliminó el título
+  separado y el mensaje corto hace de título.
+
+### Verificación
+
+Emulador `Wear_OS_Small_Round` (**384x384 @ 320dpi = 192dp**, el mínimo de WO-V16) y
+`Wear_OS_Large_Round` (**454x454 = 227dp**), los dos con `font_scale 1.30` (Largest), con
+máscara circular aplicada a cada captura para ver exactamente lo que recorta el bisel:
+
+| Pantalla | 192dp @1.3 | 227dp @1.3 |
+|----------|-----------|-----------|
+| Walkthrough (8 pasos) | ✅ | ✅ |
+| Aviso companion | ✅ botón visible | ✅ |
+| Marcador (0/40/G3, saque) | ✅ | ✅ |
+| Ajustes (recorrido completo) | ✅ | ✅ |
+| Nuevo partido (recorrido completo) | ✅ | ✅ |
+| Tutorial (recorrido completo) | ✅ | ✅ |
+| Fin de partido (con aviso companion) | ✅ | ✅ |
+| Probar contador | ✅ | — |
+
+También se repasó a `font_scale 1.0` para confirmar que no hubo regresión visual.
+
+**Test de regresión nuevo:** `WideTextButtonScreenshotTest` renderiza las tres etiquetas más
+largas de la app en 198dp con `fontScale 1.3`. Si alguien vuelve a usar `Button` con texto, las
+capturas cambian y el test falla. Se puede cubrir en Paparazzi porque los botones no viven
+dentro de un `ScalingLazyColumn` (que es lo que renderiza vacío).
+
+---
+
+## Primer rechazo de Wear OS (3 ago 2026) — ✅ RESUELTO
 
 Tres violaciones de las Wear OS app quality guidelines. Las tres están **corregidas y
 verificadas en hardware** (Galaxy Watch 6 real) en el branch `chore/target-sdk-bump`.
@@ -184,12 +277,13 @@ las pantallas con la fuente en Largest, no solo las dos señaladas.
 | Artefacto | versionCode | versionName | targetSdk | Estado |
 |-----------|-------------|-------------|-----------|--------|
 | mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (publicado 30/07/2026) |
-| wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) → "Sustituida por otra versión" |
-| wear | **350110003** | **1.1.0** | **35** | **En revisión** — Envío 12, 03/08/2026 13:34 |
+| wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
+| wear | 350110003 | 1.1.0 | 35 | **Rechazada (Envío 12, 05/08/2026)** — WO-V1, texto cortado con fuente grande |
+| wear | **350110103** | **1.1.0** | **35** | **Listo para subir** — `release-artifacts/padel-wear-v1.1.0-vc350110103.aab` |
 | mobile | 360110000 | 1.1.0 | 36 | Sin subir — listo en `chore/target-sdk-bump` |
 
-Con *Publicación gestionada desactivada*, la 350110003 se publica automáticamente al 100% en
-los 177 países en cuanto Google la apruebe (plazo estimado: 7 días).
+Con *Publicación gestionada desactivada*, el bundle aprobado se publica automáticamente al 100%
+en los 177 países en cuanto Google lo apruebe (plazo estimado: 7 días).
 
 El Envío 12 incluyó dos cambios más la declaración de servicios en primer plano:
 
@@ -371,24 +465,12 @@ próximo ciclo de requisitos de Play va a empujar igual. Mejor hacerlo en frío 
 
 Ninguno bloquea nada. Ordenados por valor.
 
-### `TimeText` sin `scrollAway` (UI de producción)
+### Config de test del Galaxy Watch propio
 
-En las **5 pantallas con `ScalingLazyColumn`** de `:wear`, el título del contenido pasa por
-debajo del reloj del sistema al scrollear. Se vio en la pantalla del companion prompt, pero
-aplica a todas: `SettingsScreen` (L832), `TutorialScreen` (L1181), `NewMatchScreen` (L1243),
-`MatchFinishedScreen` (L1371) y `CompanionPromptScreen` (L1458) en `MainActivity.kt`.
-
-El arreglo canónico es `TimeText(modifier = Modifier.scrollAway(listState))` con
-`import androidx.wear.compose.material.scrollAway`. Tres de las cinco pantallas ya tienen el
-`listState` creado y pasado al `ScalingLazyColumn`; las otras dos hay que agregárselo.
-
-### Config de test del Galaxy Watch
-
-`CounterScreenshotTest.kt` usa `GALAXY_WATCH_40MM` con 792x792 @ XXXHIGH (198dp), que
-corresponde al **Galaxy Watch 4/5 40mm**. El reloj real de prueba es un **Watch 6 40mm, que
-es 432x432 (216dp)**. Conviene renombrar el config existente a `GALAXY_WATCH_4_40MM` (para que
-el nombre no mienta) y, si se quiere cubrir el dispositivo propio, agregar uno de 864x864 @
-XXXHIGH.
+`CounterScreenshotTest.kt` cubre 225dp (`PIXEL_WATCH`) y 198dp (`GALAXY_WATCH_4_40MM`, el
+Galaxy Watch 4/5 40mm). El reloj real de prueba es un **Watch 6 40mm: 432x432 @ 340dpi =
+203dp**, que cae entre los dos y por eso no tiene config propio. Si se quiere cubrir exacto,
+agregar uno de 864x864 @ XXXHIGH con `density = 680`.
 
 ### Símbolos de depuración nativos (opcional)
 
@@ -401,8 +483,14 @@ valor real es bajo: las dos `.so` del bundle (`libandroidx.graphics.path`,
 
 Las pantallas con `ScalingLazyColumn` renderizan **vacías** en Paparazzi: el componente
 necesita una pasada de scroll que el render estático no hace. Por eso los screenshot tests
-solo cubren `CounterScreen`. Forzarlo requeriría inyectar el `ScalingLazyListState` desde
-afuera solo para el test. Ya está documentado en el header de `CounterScreenshotTest.kt`.
+cubren `CounterScreen` (que no usa lista) y los botones sueltos (`WideTextButtonScreenshotTest`),
+no las pantallas de lista completas. Forzarlo requeriría inyectar el `ScalingLazyListState`
+desde afuera solo para el test. Ya está documentado en el header de `CounterScreenshotTest.kt`.
+
+**Consecuencia práctica:** las pantallas de lista con la fuente en grande **solo** se pueden
+verificar en emulador o hardware. Es exactamente el hueco por el que se colaron los dos
+rechazos. El procedimiento que sí funciona está en la sección del segundo rechazo: emulador de
+192dp con `font_scale 1.30` y máscara circular sobre cada captura.
 
 ---
 
@@ -453,10 +541,18 @@ Pendiente:
 Replanificado el 03/08/2026: el rechazo del reloj adelantó su 1.1.0, así que la tanda del
 teléfono quedó sola.
 
-### Release 1 — Wear OS 1.1.0 · ✅ enviada (Envío 12, en revisión)
+### Release 1 — Wear OS 1.1.0 · ⏳ HAY QUE SUBIR EL BUNDLE NUEVO
 
-`wear 350110003`. **Nada que hacer**: esperar la aprobación. Se publica automáticamente.
-Incluyó los tres fixes del rechazo, el `targetSdk 35` y el pausado de los canales de prueba.
+`wear 350110103` — `release-artifacts/padel-wear-v1.1.0-vc350110103.aab`, firmado con la misma
+key que el mobile de producción (SHA256 verificado).
+
+El Envío 12 (`350110003`) fue **rechazado el 5/8** por texto cortado con fuente grande. Este
+bundle corrige eso (`Button`→`Chip`, tutorial centrado, textos acortados) y está verificado en
+192dp y 227dp con la fuente al máximo.
+
+En Play Console: Producción → selector de form factor → **Wear OS only** → Crear nueva versión →
+subir el AAB → dejar el `350110003` en "No incluido" → lanzar al 100% → enviar a revisión.
+Los canales de prueba ya están pausados de la vuelta anterior, no hay que volver a tocarlos.
 
 ### Release 2 — `:mobile` 1.1.0 · ⏰ CON FECHA LÍMITE: 30 de agosto de 2026
 

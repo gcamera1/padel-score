@@ -8,9 +8,10 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | Artefacto | versionCode | versionName | targetSdk | Estado |
 |-----------|-------------|-------------|-----------|--------|
 | mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (desde 30/07/2026) |
-| wear | 340100003 | 1.0.0 | 34 | En revisión — Envío 11, 01/08/2026 |
+| wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
+| wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 |
+| wear | **350110103** | 1.1.0 | **35** | Listo para subir |
 | mobile | 360110000 | 1.1.0 | **36** | Sin publicar (branch `chore/target-sdk-bump`) |
-| wear | 350110003 | 1.1.0 | **35** | Sin publicar (branch `chore/target-sdk-bump`) |
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos
@@ -185,12 +186,43 @@ Los que aplican a esta app, de la
 | WO-P2 | No crashea al instalar/abrir | verificar en reloj real |
 | WO-P5 | La app non-standalone conecta con el companion | ✅ `CompanionDetector` |
 | WO-V3 | Swipe para cerrar funciona | verificar (el marcador usa swipe-left para ajustes) |
+| WO-V1 | Respeta el tamaño de fuente del sistema sin cortar texto | ⚠️ **causó dos rechazos** — ver abajo |
 | WO-V13 | Fondo negro | ✅ tema negro-oro |
 | WO-V14 | Mínimo 12sp en texto esencial | ✅ |
 | WO-V16 | Contenido dentro del display, círculo de 192dp mínimo | ✅ `ScreenMetrics` (`fw² + fh² ≤ 1.0`); los screenshot tests cubren 225dp y 198dp |
 | WO-G5 | Capturas 1:1, sin marco, sin alfa | ✅ vía `scripts/wear-store-screenshots.sh` |
 | WO-G7 | Mismo package y misma key que el companion | ✅ verificado con `keytool` |
 | — | Soporte 64-bit (obligatorio 15/09/2026) | ✅ `arm64-v8a` presente |
+
+### WO-V1 — texto con la fuente del sistema en grande
+
+Es lo que rechazó la app dos veces. Reglas que salieron de ahí:
+
+- **Nunca usar `Button`/`OutlinedButton` de Wear Material con una etiqueta de texto.** Son
+  botones **circulares para iconos**: `size(52.dp)` fijo y sin padding interno, así que con la
+  fuente en Largest el texto envuelve y pierde la primera y la última letra contra el borde de
+  la píldora. Para botones de texto usar el helper `WideTextButton` (`Chip`/`OutlinedChip`).
+- **Texto centrado, nunca alineado a la izquierda**, en pantallas de texto largo. En una pantalla
+  redonda el ancho disponible a distancia `y` del centro es `√(R²−y²)`: si todas las líneas
+  arrancan en el mismo `x`, las de arriba y abajo caen en la curva y se comen la primera letra.
+- **Items cortos en `ScalingLazyColumn`.** La lista escala los items contra el borde curvo, pero
+  solo si el item entra en la pantalla: uno más alto que el display se dibuja a escala 1.0 y sus
+  líneas extremas quedan en las esquinas. Regla práctica: ≤3 líneas con la fuente en Largest.
+- **Presupuesto vertical** de un reloj de 192dp con la fuente al máximo: ~122dp de contenido
+  (192 menos el `contentPadding` de 40 arriba y 30 abajo). Un título de dos líneas más un mensaje
+  de dos líneas ya no deja lugar para un botón.
+
+Verificación obligatoria antes de subir (los screenshot tests **no** alcanzan: las pantallas con
+`ScalingLazyColumn` renderizan vacías en Paparazzi):
+
+```bash
+emulator -avd Wear_OS_Small_Round &          # 384x384 @ 320dpi = 192dp, el mínimo de WO-V16
+adb shell settings put system font_scale 1.30 # Largest
+adb shell pm clear com.gonzalocamera.padelcounter
+# recorrer TODAS las pantallas capturando con máscara circular, porque el framebuffer es
+# cuadrado y el bisel recorta lo que queda fuera del círculo:
+adb exec-out screencap -p > cap.png
+```
 
 ## 9. Checklist Pre-Upload
 
@@ -203,5 +235,7 @@ Los que aplican a esta app, de la
 - [ ] Ambos AABs firmados con la misma key (`keytool -printcert -jarfile`, comparar SHA256)
 - [ ] `./gradlew :shared:test :wear:test :mobile:test` pasa
 - [ ] `./gradlew :wear:verifyPaparazziDebug` pasa (sin diffs visuales inesperados)
+- [ ] Ningún `Button`/`OutlinedButton` de Wear con texto: `grep -n "OutlinedButton\|Button(" wear/src/main/**/MainActivity.kt` solo debe dar los dos botones de icono de `StrokeTestScreen`
+- [ ] Recorrido completo en emulador de 192dp con `font_scale 1.30`, sin texto cortado (§8, WO-V1)
 - [ ] Capturas de Wear OS generadas y sin alfa
 - [ ] Declaración de foreground service completa en Play Console

@@ -316,17 +316,23 @@ las pantallas con la fuente en Largest, no solo las dos señaladas.
 |-----------|-------------|-------------|-----------|--------|
 | mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (publicado 30/07/2026) |
 | wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
-| wear | 350110003 | 1.1.0 | 35 | **Rechazada (Envío 12, 05/08/2026)** — WO-V1, texto cortado con fuente grande |
-| wear | **350110103** | **1.1.0** | **35** | **Listo para subir** — `release-artifacts/padel-wear-v1.1.0-vc350110103.aab` |
+| wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 → "Sustituida por otra versión" |
+| wear | **350110103** | **1.1.0** | **35** | **En revisión** — Envío 13, 05/08/2026 17:07, lanzamiento al 100% |
 | mobile | 360110000 | 1.1.0 | 36 | Sin subir — listo en `chore/target-sdk-bump` |
 
 Con *Publicación gestionada desactivada*, el bundle aprobado se publica automáticamente al 100%
 en los 177 países en cuanto Google lo apruebe (plazo estimado: 7 días).
 
-El Envío 12 incluyó dos cambios más la declaración de servicios en primer plano:
+El Envío 13 llevó dos cambios: Producción (Wear OS) → `350110103` → lanzamiento completo, y
+Prueba cerrada (Wear OS) → pausar canal (venía pendiente de la vuelta anterior). El
+`350110003` quedó en **"No incluido"**, que es lo que exige la remediación de Play, verificado
+en la pantalla de revisión. 75 wearables compatibles. Única advertencia: la de símbolos de
+depuración nativos, que es opcional (sección 4).
 
-1. Producción (Wear OS) → 350110003 → lanzamiento completo
-2. Prueba cerrada (Wear OS) → pausar canal
+El **aviso de nivel de API de Wear OS no reapareció**: el `targetSdk 35` quedó aceptado. El del
+teléfono sí sigue, con fecha límite 30 de agosto.
+
+El Envío 12 (rechazado) había llevado los mismos dos cambios con el bundle `350110003`.
 
 **Los dos canales de prueba quedaron pausados** para sacar de circulación los bundles con
 targetSdk 34, como pide la remediación de Play (*"actualiza también esos canales"*):
@@ -626,21 +632,18 @@ Pendiente:
 Replanificado el 03/08/2026: el rechazo del reloj adelantó su 1.1.0, así que la tanda del
 teléfono quedó sola.
 
-### Release 1 — Wear OS 1.1.0 · ⏳ HAY QUE SUBIR EL BUNDLE NUEVO
+### Release 1 — Wear OS 1.1.0 · ✅ enviada (Envío 13, en revisión)
 
-`wear 350110103` — `release-artifacts/padel-wear-v1.1.0-vc350110103.aab`, firmado con la misma
-key que el mobile de producción (SHA256 verificado).
+`wear 350110103`. **Nada que hacer: esperar la aprobación**, hasta 7 días. Se publica sola al
+100% en los 177 países.
 
-El Envío 12 (`350110003`) fue **rechazado el 5/8** por texto cortado con fuente grande. Este
-bundle corrige eso (`Button`→`Chip`, tutorial centrado, textos acortados) y está verificado en
-192dp y 227dp con la fuente al máximo.
+Corrige el rechazo por WO-V1 (`Button`→`Chip`, tutorial centrado, textos acortados), verificado
+en 192dp y 227dp con la fuente al máximo, y arrastra el `targetSdk 35` y el pausado de los
+canales de prueba de las vueltas anteriores.
 
-En Play Console: Producción → selector de form factor → **Wear OS only** → Crear nueva versión →
-subir el AAB → dejar el `350110003` en "No incluido" → lanzar al 100% → enviar a revisión.
-
-**Solo Producción.** El "Ver app bundles" del rechazo señala únicamente al `350110003` en
-Producción, así que los canales de prueba no hay que tocarlos (y ya están pausados). Sí conviene
-dejar viajar el cambio pendiente de "pausar Prueba cerrada" que quedó de la vuelta anterior.
+Cuando se apruebe: **desinstalar el APK de debug del reloj antes de bajarla de Play.** Está
+firmado con la debug keystore y Play no puede actualizar sobre otra firma; el error que da no
+explica la causa.
 
 ### Release 2 — `:mobile` 1.1.0 · ⏰ CON FECHA LÍMITE: 30 de agosto de 2026
 

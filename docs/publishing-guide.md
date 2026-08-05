@@ -10,7 +10,7 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (desde 30/07/2026) |
 | wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 |
-| wear | **350110103** | 1.1.0 | **35** | Listo para subir |
+| wear | **350110103** | 1.1.0 | **35** | **En revisión** (Envío 13, 05/08/2026) |
 | mobile | 360110000 | 1.1.0 | **36** | Sin publicar (branch `chore/target-sdk-bump`) |
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
@@ -158,6 +158,22 @@ Pasos en la consola:
 5. **Production** → selector de form factor arriba a la derecha → **"Wear OS only"** →
    **Create new release** → subir el AAB
 6. Esperar la revisión de Google contra las Wear OS app quality guidelines
+
+### Reenviar después de un rechazo
+
+Al rechazar, Play **vacía el borrador de la versión** pero deja el cambio pendiente descrito en
+el Resumen de publicación con el bundle viejo. Es confuso pero no es un problema: se abre el
+borrador existente, se agrega el bundle nuevo, y el rechazado aparece solo en **"No incluido"**,
+que es justo donde la remediación lo quiere. Conviene reconfirmarlo en la pantalla de revisión.
+
+**Si al arrastrar el AAB dice "El código de versión N ya se ha usado":** no bumpees el
+versionCode. Ese error casi siempre significa que **el bundle sí se ingirió** y el reintento
+chocó con su propia copia. Usá **"Añadir de la biblioteca"** en la misma caja de subida y
+agregalo desde ahí — es el mismo artefacto ya verificado, y evita rebuildear y volver a validar.
+Pasó exactamente así en el Envío 13.
+
+Ojo con un detalle de la biblioteca: **el bundle rechazado no figura** en ella, porque sigue
+asociado a la versión de producción rechazada. Eso es normal, no significa que se haya perdido.
 
 ## 7. Declaración de foreground service
 

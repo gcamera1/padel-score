@@ -88,6 +88,35 @@ máscara circular aplicada a cada captura para ver exactamente lo que recorta el
 
 También se repasó a `font_scale 1.0` para confirmar que no hubo regresión visual.
 
+### Cuál es el peor caso real, medido en el sistema
+
+No hace falta adivinar hasta dónde puede subir la fuente un revisor. Se midió en
+**Ajustes → Accesibilidad → Tamaño del texto** del propio Wear OS (API 36):
+
+| Eje | Rango que ofrece el sistema | Peor caso |
+|-----|-----------------------------|-----------|
+| **Tamaño de fuente** | slider de 7 pasos: 0.94 · 1.0 · 1.06 · 1.12 · 1.18 · **1.24** | `font_scale = 1.24` |
+| **Tamaño de pantalla** | slider de 4 pasos, **arranca en el máximo** (320dpi = 192dp). Solo se puede bajar, y bajarlo da *más* dp (301dpi = 204dp) | el default |
+| **Texto en negrita** | on/off (`font_weight_adjustment = 300`) | on |
+
+O sea: **1.24 es el tope**, y las capturas de arriba están tomadas a **1.30**, más duro que
+cualquier cosa que un usuario pueda elegir. Se repitió además el recorrido completo a
+**1.24 + negrita** (el peor caso alcanzable de verdad) y también quedó limpio.
+
+Ojo con el atajo de `adb shell settings put system font_scale 1.30`: **acepta** valores por
+encima del tope de la UI, así que sirve para tener margen, pero no confundirlo con "lo que ve
+el revisor".
+
+### Lo que se revisó y NO era problema
+
+- **`maxLines = 1` sin `overflow = Ellipsis`** en el marcador (los sets, los puntos y los games,
+  `MainActivity.kt` L567-581 y L791-805). Es un sospechoso habitual, pero acá los textos son de
+  1 o 2 caracteres como máximo ("40", "AD", "G3", "10") y entran de sobra incluso a 1.30 en
+  192dp. Además ponerles puntos suspensivos sería peor: mostrar "4…" en vez del puntaje.
+- **El marcador** (la pantalla que más riesgo tiene a priori: números grandes y botones juntos).
+  Verificado en 0-0, 40-0 y con el indicador de saque, a 1.30 y a 1.24+negrita.
+- **`TimeText`**: lo dibuja el sistema, no la app.
+
 **Test de regresión nuevo:** `WideTextButtonScreenshotTest` renderiza las tres etiquetas más
 largas de la app en 198dp con `fontScale 1.3`. Si alguien vuelve a usar `Button` con texto, las
 capturas cambian y el test falla. Se puede cubrir en Paparazzi porque los botones no viven
@@ -562,6 +591,17 @@ Es lo próximo urgente. El Centro de políticas sigue marcando *"La aplicación 
 orientada a Android 16 (nivel 36 de la API) o a una versión posterior — fecha límite 30 ago"*.
 Eso es el artefacto de teléfono, y el envío del reloj **no lo resuelve**. Pasada esa fecha no
 se pueden publicar actualizaciones del teléfono.
+
+> **⚠️ Dependencia entre las dos releases.** Una actualización se publica solo si se aprueban
+> **todos** los cambios del envío, así que mientras el artefacto de Wear OS esté rechazado el
+> teléfono **no puede publicar** — ni la ficha ni el AAB. La release 2 está bloqueada detrás de
+> la aprobación del reloj.
+>
+> El reloj ya consumió dos ciclos de revisión (hasta 7 días cada uno) y quedan ~25 días. Si el
+> `350110103` **no está aprobado alrededor del 20 de agosto**, hay que desbloquear el teléfono
+> por su cuenta: *Configuración avanzada → Tipos de versión → Wear OS by Google → Gestionar →
+> desmarcar "Activar"*, publicar mobile 1.1.0, y volver a activar el form factor del reloj
+> después. Es reversible y no borra la ficha de Wear OS.
 
 Contenido, todo ya commiteado y con la suite en verde:
 

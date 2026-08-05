@@ -212,16 +212,25 @@ Es lo que rechazó la app dos veces. Reglas que salieron de ahí:
   (192 menos el `contentPadding` de 40 arriba y 30 abajo). Un título de dos líneas más un mensaje
   de dos líneas ya no deja lugar para un botón.
 
+El peor caso está **medido**, no estimado, en Ajustes → Accesibilidad → Tamaño del texto de
+Wear OS (API 36): el slider de fuente tiene 7 pasos y termina en **1.24**; el de tamaño de
+pantalla ya arranca en su máximo (320dpi = 192dp) y solo se puede bajar, lo que da *más* dp. Con
+lo cual el peor caso alcanzable es **192dp · font_scale 1.24 · negrita**.
+
 Verificación obligatoria antes de subir (los screenshot tests **no** alcanzan: las pantallas con
 `ScalingLazyColumn` renderizan vacías en Paparazzi):
 
 ```bash
-emulator -avd Wear_OS_Small_Round &          # 384x384 @ 320dpi = 192dp, el mínimo de WO-V16
-adb shell settings put system font_scale 1.30 # Largest
+emulator -avd Wear_OS_Small_Round &            # 384x384 @ 320dpi = 192dp, el mínimo de WO-V16
+adb shell settings put system font_scale 1.30  # por encima del tope de la UI, para tener margen
+adb shell settings put secure font_weight_adjustment 300   # negrita
 adb shell pm clear com.gonzalocamera.padelcounter
 # recorrer TODAS las pantallas capturando con máscara circular, porque el framebuffer es
 # cuadrado y el bisel recorta lo que queda fuera del círculo:
 adb exec-out screencap -p > cap.png
+# al terminar, restaurar:
+adb shell settings put system font_scale 1.0
+adb shell settings put secure font_weight_adjustment 0
 ```
 
 ## 9. Checklist Pre-Upload

@@ -175,6 +175,12 @@ Pasó exactamente así en el Envío 13.
 Ojo con un detalle de la biblioteca: **el bundle rechazado no figura** en ella, porque sigue
 asociado a la versión de producción rechazada. Eso es normal, no significa que se haya perdido.
 
+**Para auditar qué se envió de verdad** (útil si una subida se cortó y no quedó claro qué pasó):
+Resumen de publicación → **Actividad de envíos**. Lista un renglón por envío con su ID, fecha,
+canales y estado, y la flechita de la derecha abre el detalle con el `versionCode` incluido.
+Subir un bundle y enviar a revisión son cosas **distintas**: se puede subir varias veces y enviar
+una sola, así que las subidas fallidas no aparecen acá — y si no aparecen, no se enviaron.
+
 ## 7. Declaración de foreground service
 
 El artefacto del reloj declara permisos que el del teléfono no tenía, por el contador de

@@ -4,11 +4,20 @@ Estado al **5 de agosto de 2026**.
 
 ## Segundo rechazo de Wear OS (5 ago 2026) — ✅ RESUELTO
 
-Google rechazó también el Envío 12 (bundle `350110003`), con **un solo motivo** y el mismo de
-antes:
+Google rechazó también el Envío 12, con **un solo motivo** y el mismo de antes:
 
 > Directrices de calidad de la aplicación de Wear OS: la funcionalidad no se comporta según lo
 > descrito — *"textos sin cortes cuando se selecciona un tamaño de fuente grande"*.
+
+El link **"Ver app bundles"** del detalle del problema confirma el alcance: el único bundle
+señalado es **`350110003` (1.1.0), targetSdk 35, Producción, primera publicación 3 ago 2026**. No
+figura el `340100003` viejo. Dos consecuencias:
+
+- El rechazo es sobre el bundle **con los fixes de la primera vuelta ya aplicados**, así que el
+  defecto que quedaba era real y distinto.
+- La remediación se limita a **Producción**. A diferencia de la vuelta anterior —donde el bundle
+  señalado vivía en el canal de prueba interna y hubo que pausar los dos canales— acá los canales
+  de prueba **no están implicados**, y además ya están pausados.
 
 La primera vuelta arregló el walkthrough, que era la pantalla que Google había capturado. Pero
 el defecto vivía en **otras dos pantallas que no se habían mirado con la fuente en grande**, y
@@ -628,7 +637,10 @@ bundle corrige eso (`Button`→`Chip`, tutorial centrado, textos acortados) y es
 
 En Play Console: Producción → selector de form factor → **Wear OS only** → Crear nueva versión →
 subir el AAB → dejar el `350110003` en "No incluido" → lanzar al 100% → enviar a revisión.
-Los canales de prueba ya están pausados de la vuelta anterior, no hay que volver a tocarlos.
+
+**Solo Producción.** El "Ver app bundles" del rechazo señala únicamente al `350110003` en
+Producción, así que los canales de prueba no hay que tocarlos (y ya están pausados). Sí conviene
+dejar viajar el cambio pendiente de "pausar Prueba cerrada" que quedó de la vuelta anterior.
 
 ### Release 2 — `:mobile` 1.1.0 · ⏰ CON FECHA LÍMITE: 30 de agosto de 2026
 

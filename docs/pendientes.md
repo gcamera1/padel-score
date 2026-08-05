@@ -490,9 +490,56 @@ próximo ciclo de requisitos de Play va a empujar igual. Mejor hacerlo en frío 
 
 ---
 
-## 4. Detalles menores de código
+## 4. Bugs y detalles de código
 
-Ninguno bloquea nada. Ordenados por valor.
+El primero es un bug real que corrompe datos; el resto no bloquea nada.
+
+### 🐛 El reloj re-sincroniza el partido terminado en cada arranque en frío
+
+**Encontrado el 5/8/2026** mientras se instalaba el build nuevo en el reloj real. Es
+**preexistente**, no lo introdujo el fix de WO-V1.
+
+`MainActivity.kt`, el `LaunchedEffect(state.mySets, state.oppSets)` que sincroniza el partido al
+terminarlo:
+
+```kotlin
+LaunchedEffect(state.mySets, state.oppSets) {
+    if (isMatchFinished(state) && screen == Screen.COUNTER && !matchSynced) {
+        matchSynced = true
+        val match = Match(id = UUID.randomUUID().toString(), ...)   // <-- id nuevo cada vez
+        syncQueue.enqueue(match); syncSender.trySendPending()
+```
+
+En un arranque en frío `screen` vale `COUNTER` y `matchSynced` vale `false`. Si el estado
+persistido en DataStore tiene un partido terminado, el efecto **se vuelve a disparar** y manda el
+mismo partido otra vez con un id nuevo. Y el id nuevo rompe las dos defensas que existen:
+
+- `WearSyncSender` publica en `"/padel-score/match/${match.id}"`. Con el mismo id, el
+  `DataClient` deduplicaría solo (mismo path + mismo payload = no hay evento). Con id aleatorio,
+  cada envío es un `DataItem` distinto.
+- El teléfono inserta con `insertIfAbsent` (`OnConflictStrategy.IGNORE`), que protege contra
+  reimportar **el mismo id**. Con id nuevo no aplica: entra una fila más.
+
+**Resultado:** un partido duplicado en el historial del teléfono por cada vez que se abre la app
+del reloj con un partido terminado sin resetear.
+
+**Cuándo se manifiesta:** solo si terminás un partido y cerrás la app **sin** tocar "Jugar de
+nuevo" ni "Nuevo partido" — cualquiera de los dos resetea el estado. Por eso no se había notado.
+
+**Arreglo propuesto:** que el id sea **determinístico**, derivado del contenido del partido
+(`startedAt` + `setsScore`) en vez de `UUID.randomUUID()`. Con eso el path del `DataItem` se
+repite, el `DataClient` deduplica solo, y el `INSERT OR IGNORE` del teléfono pasa a funcionar de
+verdad como segunda red. Alternativa más chica pero menos robusta: persistir un flag de "ya
+sincronizado" junto al estado del partido.
+
+**Por qué no se arregló junto con el fix de WO-V1:** toca el camino de sincronización, que es lo
+más riesgoso de cambiar justo antes de un reenvío, y verificarlo bien necesita el teléfono **y**
+el reloj conectados a la vez. El bundle del reloj además está bloqueando la release del teléfono,
+que sí tiene fecha límite. Va en la próxima release del reloj (ver el plan de releases).
+
+**Ojo al depurar en el reloj real:** cada `adb install -r` mata el proceso, así que relanzar la
+app con un partido terminado en el estado dispara el duplicado. El 5/8 pasó dos veces con el
+partido del 4/8 (2-1, 4-6 6-4 7-5).
 
 ### Config de test del Galaxy Watch propio
 
@@ -619,7 +666,17 @@ Antes de subirla:
 - Revisar el checklist de `publishing-guide.md` §9
 - Se sube al track de **teléfono** (el selector por defecto), no al de Wear OS
 
-### Release 3 — migración de toolchain
+### Release 3 — Wear OS 1.1.1: el partido duplicado
+
+`wear 350111003` (siguiente build del esquema). Arregla el bug de la sección 4: el id del
+partido pasa a ser determinístico para que reabrir la app no vuelva a mandarlo al teléfono.
+
+Va **después** de que se apruebe la 1.1.0, no mezclado con ella: toca el camino de
+sincronización y no tiene nada que ver con el rechazo. Verificación necesaria: reloj **y**
+teléfono conectados a la vez, terminar un partido, cerrar la app sin resetear, reabrirla, y
+confirmar que en el historial del teléfono sigue habiendo **una** entrada.
+
+### Release 4 — migración de toolchain
 
 AGP / Kotlin 2.x / Compose BOM / Paparazzi 2.x, y recién ahí `compileSdk 36` en `:mobile`
 (sección 3). Va sola, sin mezclar con cambios funcionales, porque lo que rompe es la UI y los

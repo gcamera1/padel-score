@@ -119,3 +119,15 @@ Watch finishes match → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPe
 - **Pure functions preferred** in `:shared` logic — no side effects
 - **Versioning:** `PADEL_VERSION_CODE` and `PADEL_VERSION_NAME` in root `gradle.properties`, shared by both `:mobile` and `:wear`. Build enforces consistency via `checkVersionConsistency` task.
 - **Haptic feedback (wear):** `TextHandleMove` for taps, `LongPress` for double-taps
+- **Wear text buttons:** never use Wear Material's `Button`/`OutlinedButton` with a text label —
+  they are **circular icon buttons** (`size(52.dp)` fixed, no content padding), so with a large
+  system font the label wraps and gets clipped by the pill's rounded edge. Play rejected the app
+  twice over this (WO-V1). Use the `WideTextButton` helper (`Chip`/`OutlinedChip`), which grows in
+  height and reserves padding. The two 36dp buttons in `StrokeTestScreen` are the only legitimate
+  `Button` uses: those really are icon buttons.
+- **Wear long text:** center it (`TextAlign.Center`) and keep each `ScalingLazyColumn` item to ≤3
+  lines at the largest font. On a round display the available width at distance `y` from center is
+  `√(R²−y²)`: left-aligned lines all start at the same `x` and lose their first letter in the
+  curve, and an item taller than the screen renders at scale 1.0 with its extreme lines in the
+  corners. Worst case to verify against: **192dp · font_scale 1.24 · bold** (see
+  `docs/publishing-guide.md` §8).

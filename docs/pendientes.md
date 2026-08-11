@@ -330,8 +330,8 @@ las pantallas con la fuente en Largest, no solo las dos señaladas.
 | mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (publicado 30/07/2026) |
 | wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 → "Sustituida por otra versión" |
-| wear | **350110103** | **1.1.0** | **35** | ✅ **Aprobada** (11/08/2026) — Envío 13, lanzamiento al 100% |
-| mobile | **360110100** | **1.1.0** | **36** | **Listo para subir** — AAB en `release-artifacts/`, mergeado a `main` |
+| wear | **350110103** | **1.1.0** | **35** | ✅ **Publicada** (11/08/2026 04:00) — Envío 13, 100% |
+| mobile | **360110100** | **1.1.0** | **36** | **En revisión** — Envío 14, 11/08/2026 10:57, 100% |
 
 Con *Publicación gestionada desactivada*, el bundle aprobado se publica automáticamente al 100%
 en los 177 países en cuanto Google lo apruebe (plazo estimado: 7 días).
@@ -691,7 +691,7 @@ Cuando se apruebe: **desinstalar el APK de debug del reloj antes de bajarla de P
 firmado con la debug keystore y Play no puede actualizar sobre otra firma; el error que da no
 explica la causa.
 
-### Release 2 — `:mobile` 1.1.0 · 🚀 LISTA PARA SUBIR · fecha límite: 31 de agosto de 2026
+### Release 2 — `:mobile` 1.1.0 · ✅ ENVIADA (Envío 14, 11/08/2026 10:57, en revisión)
 
 `mobile 360110100`, mergeado a `main` (11/08/2026) y compilado:
 **`release-artifacts/padel-mobile-v1.1.0-vc360110100.aab`**.
@@ -722,6 +722,13 @@ desactivar el form factor de Wear OS alrededor del 20 de agosto ya no hace falta
 | Edge-to-edge en teléfono real | ✅ verificado por uso del build del branch |
 
 SHA-256 del AAB: `4d08f141917548408cb41cc1533b44ee00c84182f6fd7af8497b7ff83410cd90`
+
+**Enviado el 11/08/2026 10:57 (Envío 14).** Producción → teléfono (Teléfonos, Tablets, Chrome OS,
+Android XR), 100%, 177 países. Verificado antes de enviar: el bundle listado era el `360110100`
+con SDK objetivo 36; el track de Wear OS seguía **Activo** con el `350110103` publicado y no
+apareció como reemplazado ni en "No incluido"; y "Cambios que aún no se han enviado a revisión"
+mostraba **un solo ítem** (Producción `360110100`), sin arrastrar ficha, capturas ni precios.
+Única advertencia: la de símbolos de depuración nativos, opcional.
 
 Contenido extra respecto del plan original: **el texto de compartir ahora incluye las reglas
 del partido** — duración, modo (Deuce / Punto de Oro / Star Point) y desempate configurado

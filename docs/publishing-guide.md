@@ -10,8 +10,8 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (desde 30/07/2026) |
 | wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 |
-| wear | **350110103** | 1.1.0 | **35** | ✅ **Aprobada** (11/08/2026, Envío 13) |
-| mobile | **360110100** | 1.1.0 | **36** | Listo para subir — AAB en `release-artifacts/` |
+| wear | **350110103** | 1.1.0 | **35** | ✅ **Publicada** (11/08/2026, Envío 13) |
+| mobile | **360110100** | 1.1.0 | **36** | **En revisión** (Envío 14, 11/08/2026) |
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos
@@ -180,6 +180,15 @@ Resumen de publicación → **Actividad de envíos**. Lista un renglón por env�
 canales y estado, y la flechita de la derecha abre el detalle con el `versionCode` incluido.
 Subir un bundle y enviar a revisión son cosas **distintas**: se puede subir varias veces y enviar
 una sola, así que las subidas fallidas no aparecen acá — y si no aparecen, no se enviaron.
+
+### Si cambiás el bundle después de abrir el borrador
+
+**Revisá el campo "Nombre de la versión".** Play lo autocompleta con el `versionCode` que había
+en el borrador y **no lo actualiza** al reemplazar el bundle, así que puede quedar apuntando a un
+artefacto que ya no existe. Pasó en el Envío 14: el nombre decía `360110000 (1.1.0)` con el
+bundle `360110100` subido. No afecta la publicación —es una etiqueta interna— pero deja el
+historial de versiones mintiendo sobre qué se envió, que es exactamente lo que uno va a consultar
+dentro de seis meses.
 
 ## 7. Declaración de foreground service
 

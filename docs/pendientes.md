@@ -331,7 +331,7 @@ las pantallas con la fuente en Largest, no solo las dos señaladas.
 | wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 → "Sustituida por otra versión" |
 | wear | **350110103** | **1.1.0** | **35** | ✅ **Aprobada** (11/08/2026) — Envío 13, lanzamiento al 100% |
-| mobile | **360110000** | **1.1.0** | **36** | **Listo para subir** — AAB en `release-artifacts/`, mergeado a `main` |
+| mobile | **360110100** | **1.1.0** | **36** | **Listo para subir** — AAB en `release-artifacts/`, mergeado a `main` |
 
 Con *Publicación gestionada desactivada*, el bundle aprobado se publica automáticamente al 100%
 en los 177 países en cuanto Google lo apruebe (plazo estimado: 7 días).
@@ -660,8 +660,13 @@ explica la causa.
 
 ### Release 2 — `:mobile` 1.1.0 · 🚀 LISTA PARA SUBIR · fecha límite: 31 de agosto de 2026
 
-`mobile 360110000`, mergeado a `main` (11/08/2026) y compilado:
-**`release-artifacts/padel-mobile-v1.1.0-vc360110000.aab`**.
+`mobile 360110100`, mergeado a `main` (11/08/2026) y compilado:
+**`release-artifacts/padel-mobile-v1.1.0-vc360110100.aab`**.
+
+> El build `00` (`360110000`) se compiló y archivó el mismo día pero **nunca se subió**:
+> antes de enviarlo entró el bloque de reglas del texto de compartir, así que se bumpeó el
+> build a `01` y se borró el artefacto anterior. No hay dos AABs distintos con el mismo
+> versionCode.
 
 Es lo próximo. El Centro de políticas marca *"La aplicación debe estar orientada a Android 16
 (nivel 36 de la API) o a una versión posterior"*, con fecha límite **31 de agosto**. Eso es el
@@ -683,7 +688,15 @@ desactivar el form factor de Wear OS alrededor del 20 de agosto ya no hace falta
 | Suite completa (`:shared` + `:mobile` + `:wear`) | verde |
 | Edge-to-edge en teléfono real | ✅ verificado por uso del build del branch |
 
-SHA-256 del AAB: `30f7ee6afdd9c72a165324bad55ad962a5a9c6a7aea7385b0cfde53cc2aaa948`
+SHA-256 del AAB: `4d08f141917548408cb41cc1533b44ee00c84182f6fd7af8497b7ff83410cd90`
+
+Contenido extra respecto del plan original: **el texto de compartir ahora incluye las reglas
+del partido** — duración, modo (Deuce / Punto de Oro / Star Point) y desempate configurado
+(Tie-break a 7 / Súper tie-break a 10), más una línea aparte cuando el partido efectivamente
+se definió en tie-break. Un partido de carga manual omite duración, modo y desempate, porque
+esos campos quedan en el default del constructor y publicarlos sería inventar datos; sí
+conserva formato y tie-break, que son reales (el primero lo elige el usuario, el segundo se
+deriva del marcador).
 
 Contenido, todo ya commiteado y con la suite en verde:
 

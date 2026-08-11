@@ -11,7 +11,7 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 |
 | wear | **350110103** | 1.1.0 | **35** | ✅ **Aprobada** (11/08/2026, Envío 13) |
-| mobile | **360110000** | 1.1.0 | **36** | Listo para subir — AAB en `release-artifacts/` |
+| mobile | **360110100** | 1.1.0 | **36** | Listo para subir — AAB en `release-artifacts/` |
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos

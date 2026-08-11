@@ -5,6 +5,7 @@ import com.gonzalocamera.padelcounter.shared.Decider
 import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchOrigin
 import com.gonzalocamera.padelcounter.shared.PadelCategory
+import com.gonzalocamera.padelcounter.shared.ScoringMode
 import com.gonzalocamera.padelcounter.shared.Winner
 import org.junit.After
 import org.junit.Before
@@ -39,13 +40,18 @@ class MatchShareTextTest {
         bestOf: Int = 3,
         strokesPerSet: List<Int>? = null,
         origin: MatchOrigin = MatchOrigin.WEAR,
+        scoringMode: ScoringMode = ScoringMode.DEUCE,
+        decider: Decider = Decider.TB7,
+        tieBreakUsed: Boolean = false,
+        durationMinutes: Long = 107,
     ) = Match(
         id = "m1",
         startedAt = MAY_19,
-        finishedAt = MAY_19,
+        finishedAt = MAY_19 + durationMinutes * 60_000,
         setsScore = setsScore,
-        tieBreakUsed = false,
-        decider = Decider.TB7,
+        tieBreakUsed = tieBreakUsed,
+        decider = decider,
+        scoringMode = scoringMode,
         winner = winner,
         origin = origin,
         bestOf = bestOf,
@@ -63,7 +69,8 @@ class MatchShareTextTest {
             🥇 Set 1: *6-4*
             🥇 Set 2: *6-3*
 
-            📅 19/05/2024 · Al mejor de 3 sets
+            📅 19/05/2024 · 1h 47min
+            ⚙️ Al mejor de 3 sets · Deuce / Ventaja · Tie-break a 7
 
             _Simple Padel Score_
             """.trimIndent()
@@ -136,5 +143,64 @@ class MatchShareTextTest {
 
         assertThat(text).startsWith("🎾 *VICTORIA* 6-4 6-3")
         assertThat(text).contains("📅 19/05/2024")
+    }
+
+    @Test
+    fun `each scoring mode gets its own label`() {
+        assertThat(match(scoringMode = ScoringMode.DEUCE).toShareText(PadelCategory.SEXTA))
+            .contains("Deuce / Ventaja")
+        assertThat(match(scoringMode = ScoringMode.GOLDEN_POINT).toShareText(PadelCategory.SEXTA))
+            .contains("Punto de Oro")
+        assertThat(match(scoringMode = ScoringMode.STAR_POINT).toShareText(PadelCategory.SEXTA))
+            .contains("Star Point")
+    }
+
+    @Test
+    fun `decider is spelled out, not abbreviated like in the detail screen`() {
+        assertThat(match(decider = Decider.TB7).toShareText(PadelCategory.SEXTA))
+            .contains("Tie-break a 7")
+        assertThat(match(decider = Decider.SUPER10).toShareText(PadelCategory.SEXTA))
+            .contains("Súper tie-break a 10")
+    }
+
+    @Test
+    fun `the extra tie-break line only shows up when one was actually played`() {
+        assertThat(match(tieBreakUsed = true).toShareText(PadelCategory.SEXTA))
+            .contains("🎯 Se definió en tie-break")
+        assertThat(match(tieBreakUsed = false).toShareText(PadelCategory.SEXTA))
+            .doesNotContain("Se definió en tie-break")
+    }
+
+    @Test
+    fun `a match under an hour reports only minutes`() {
+        val text = match(durationMinutes = 48).toShareText(PadelCategory.SEXTA)
+
+        assertThat(text).contains("📅 19/05/2024 · 48 min")
+    }
+
+    /**
+     * Un partido cargado a mano guarda `startedAt == finishedAt` y deja modo y desempate
+     * en el default del constructor. Publicar "0 min · Deuce / Ventaja · Tie-break a 7"
+     * sería inventar datos que el usuario nunca cargó, así que se omiten — el mismo
+     * criterio que aplica el detalle.
+     */
+    @Test
+    fun `manual match omits duration and rules it never recorded`() {
+        val text = match(
+            origin = MatchOrigin.MANUAL,
+            scoringMode = ScoringMode.STAR_POINT,
+            decider = Decider.SUPER10,
+            tieBreakUsed = true,
+        ).toShareText(PadelCategory.SEXTA)
+
+        assertThat(text).contains("📅 19/05/2024\n")
+        assertThat(text).doesNotContain("min")
+        assertThat(text).doesNotContain("Star Point")
+        assertThat(text).doesNotContain("Súper tie-break")
+
+        // El formato y el tie-break jugado sí son reales: el primero lo elige el usuario
+        // al cargar el partido, el segundo se deriva del marcador.
+        assertThat(text).contains("⚙️ Al mejor de 3 sets")
+        assertThat(text).contains("🎯 Se definió en tie-break")
     }
 }

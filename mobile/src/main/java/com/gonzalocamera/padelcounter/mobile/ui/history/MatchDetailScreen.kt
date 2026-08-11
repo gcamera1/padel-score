@@ -382,7 +382,8 @@ private fun DetailRow(label: String, value: String) {
     }
 }
 
-private fun formatDuration(minutes: Long): String =
+/** `internal` para que el texto de compartir muestre la misma duración que el detalle. */
+internal fun formatDuration(minutes: Long): String =
     if (minutes < 60) "$minutes min"
     else "${minutes / 60}h ${minutes % 60}min"
 

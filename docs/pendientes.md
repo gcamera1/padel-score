@@ -555,11 +555,44 @@ del reloj con un partido terminado sin resetear.
 **Cuándo se manifiesta:** solo si terminás un partido y cerrás la app **sin** tocar "Jugar de
 nuevo" ni "Nuevo partido" — cualquiera de los dos resetea el estado. Por eso no se había notado.
 
-**Arreglo propuesto:** que el id sea **determinístico**, derivado del contenido del partido
-(`startedAt` + `setsScore`) en vez de `UUID.randomUUID()`. Con eso el path del `DataItem` se
-repite, el `DataClient` deduplica solo, y el `INSERT OR IGNORE` del teléfono pasa a funcionar de
-verdad como segunda red. Alternativa más chica pero menos robusta: persistir un flag de "ya
-sincronizado" junto al estado del partido.
+#### El mismo bug corrompe además la duración (encontrado el 11/8/2026)
+
+Una captura del historial mostró un partido con **duración de 85h 30min**, origen Reloj, fecha
+`08/08/2026 09:41`, marcador `4-6 6-4 7-5`. No es un error de medición: es el re-disparo, y la
+duración funciona como reloj forense de **cuándo se reabrió la app**.
+
+| Campo | De dónde sale | Qué pasa en el re-disparo |
+|-------|---------------|---------------------------|
+| `startedAt` | `MATCH_STARTED_AT` de DataStore, escrito **solo** en `resetMatchWithConfig()` y nunca limpiado | conserva el valor del partido original (4/8 20:11) |
+| `finishedAt` | `System.currentTimeMillis()` | se recalcula: pasa a ser el momento de la reapertura (8/8 09:41) |
+
+85h 30min es exactamente la distancia entre esas dos fechas, y el marcador es el mismo partido
+del 4/8 ya anotado más abajo.
+
+**Descarta una hipótesis natural:** *"quedó el partido sin cerrar en el reloj"*. No hay botón de
+finalizar — el partido se cierra por marcador (`isMatchFinished`) y ahí mismo se sincroniza, así
+que el teléfono se entera sin intervención. Una duración implausible **siempre** es este bug,
+nunca un partido olvidado.
+
+**Consecuencia para el fix:** el id determinístico **no alcanza**. Evita la fila duplicada, pero
+no evita que `finishedAt` se recalcule. Si el primer envío no llegó (teléfono apagado, sin
+batería) y el que entra es el del re-disparo, la única fila que queda tiene la duración basura.
+
+**Arreglo propuesto (dos partes, las dos necesarias):**
+
+1. **Persistir el momento de finalización** (`MATCH_FINISHED_AT`) cuando el partido se cierra, y
+   usar ese valor en vez de `System.currentTimeMillis()`. Eso hace el registro idempotente en
+   ambos campos.
+2. **Id determinístico** derivado del contenido (`startedAt` + `setsScore`) en vez de
+   `UUID.randomUUID()`. Con eso el path del `DataItem` se repite, el `DataClient` deduplica solo,
+   y el `INSERT OR IGNORE` del teléfono pasa a funcionar de verdad como segunda red.
+
+Con (1) hecho, el id de (2) se deriva de datos completamente estables. Alternativa más chica pero
+menos robusta que ninguna de las dos: persistir un flag de "ya sincronizado" junto al estado.
+
+**Lo que NO hace falta tocar:** las estadísticas no agregan duración (solo usan `finishedAt` para
+ordenar), así que un partido con duración corrupta no ensucia ningún promedio. Sí se ve en el
+detalle y —desde el 11/8— en el **texto de compartir**, que ahora incluye la duración.
 
 **Por qué no se arregló junto con el fix de WO-V1:** toca el camino de sincronización, que es lo
 más riesgoso de cambiar justo antes de un reenvío, y verificarlo bien necesita el teléfono **y**
@@ -714,15 +747,23 @@ Antes de subirla:
 - Revisar el checklist de `publishing-guide.md` §9
 - Se sube al track de **teléfono** (el selector por defecto), no al de Wear OS
 
-### Release 3 — Wear OS 1.1.1: el partido duplicado
+### Release 3 — Wear OS 1.1.1: el partido duplicado y su duración
 
-`wear 350111003` (siguiente build del esquema). Arregla el bug de la sección 4: el id del
-partido pasa a ser determinístico para que reabrir la app no vuelva a mandarlo al teléfono.
+`wear 350111003` (siguiente build del esquema). Arregla el bug de la sección 4, que tiene **dos
+síntomas del mismo origen**: la fila duplicada en el historial y la duración disparatada (se vio
+una de 85h 30min). Las dos partes del fix están detalladas en esa sección — persistir
+`MATCH_FINISHED_AT` **y** hacer el id determinístico. Con una sola no basta.
 
-Va **después** de que se apruebe la 1.1.0, no mezclado con ella: toca el camino de
-sincronización y no tiene nada que ver con el rechazo. Verificación necesaria: reloj **y**
-teléfono conectados a la vez, terminar un partido, cerrar la app sin resetear, reabrirla, y
-confirmar que en el historial del teléfono sigue habiendo **una** entrada.
+Va **después** de la 1.1.0 (ya aprobada), no mezclado con ella: toca el camino de sincronización
+y no tenía nada que ver con el rechazo.
+
+Verificación necesaria — reloj **y** teléfono conectados a la vez:
+
+1. Terminar un partido y cerrar la app **sin** tocar "Jugar de nuevo" ni "Nuevo partido".
+2. Reabrir la app del reloj.
+3. Confirmar en el historial del teléfono que sigue habiendo **una** entrada…
+4. …y que su **duración no cambió** entre el paso 1 y el paso 3. Esto último es lo que el fix
+   viejo (solo id determinístico) no cubría.
 
 ### Release 4 — migración de toolchain
 

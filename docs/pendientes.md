@@ -1,6 +1,19 @@
 # Pendientes — Simple Padel Score
 
-Estado al **5 de agosto de 2026**.
+Estado al **11 de agosto de 2026**.
+
+## 🎉 Wear OS 1.1.0 aprobada (11 ago 2026)
+
+Google aprobó el **Envío 13** (`350110103`). Se publica sola al 100% en los 177 países. Con eso:
+
+- **Se cierra el ciclo de los dos rechazos** por WO-V1. El fix que funcionó fue
+  `Button`→`Chip` (`WideTextButton`) + tutorial centrado + textos acortados.
+- **Se desbloquea la release del teléfono.** Ya no hace falta el plan de contingencia de
+  desactivar el form factor de Wear OS alrededor del 20 de agosto: quedó sin efecto.
+
+Pendiente al bajarla de Play: **desinstalar antes el APK de debug del reloj**, que está firmado
+con la debug keystore. Play no puede actualizar sobre otra firma y el error que da no explica
+la causa.
 
 ## Segundo rechazo de Wear OS (5 ago 2026) — ✅ RESUELTO
 
@@ -317,8 +330,8 @@ las pantallas con la fuente en Largest, no solo las dos señaladas.
 | mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (publicado 30/07/2026) |
 | wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 → "Sustituida por otra versión" |
-| wear | **350110103** | **1.1.0** | **35** | **En revisión** — Envío 13, 05/08/2026 17:07, lanzamiento al 100% |
-| mobile | 360110000 | 1.1.0 | 36 | Sin subir — listo en `chore/target-sdk-bump` |
+| wear | **350110103** | **1.1.0** | **35** | ✅ **Aprobada** (11/08/2026) — Envío 13, lanzamiento al 100% |
+| mobile | **360110000** | **1.1.0** | **36** | **Listo para subir** — AAB en `release-artifacts/`, mergeado a `main` |
 
 Con *Publicación gestionada desactivada*, el bundle aprobado se publica automáticamente al 100%
 en los 177 países en cuanto Google lo apruebe (plazo estimado: 7 días).
@@ -330,7 +343,8 @@ en la pantalla de revisión. 75 wearables compatibles. Única advertencia: la de
 depuración nativos, que es opcional (sección 4).
 
 El **aviso de nivel de API de Wear OS no reapareció**: el `targetSdk 35` quedó aceptado. El del
-teléfono sí sigue, con fecha límite 30 de agosto.
+teléfono sí sigue, con fecha límite **31 de agosto** (la notificación de Play dice textualmente
+*"Haz algo no más tarde del 31 ago"*; antes acá figuraba 30, un día de margen que no existía).
 
 El Envío 12 (rechazado) había llevado los mismos dos cambios con el bundle `350110003`.
 
@@ -620,8 +634,8 @@ Pendiente:
 - **Desinstalar del reloj el APK de debug antes de bajar la app de Play.** El instalado está
   firmado con la **debug keystore**, y Play **no puede actualizar sobre una firma distinta**:
   el error que aparece no es claro sobre la causa.
-- **`release-artifacts/padel-wear-v1.0.0-vc11.aab`** quedó de una tanda anterior, con el
-  esquema de versionCode viejo. Se puede borrar.
+- ✅ **`release-artifacts/padel-wear-v1.0.0-vc11.aab`** (esquema de versionCode viejo): ya no
+  está.
 - **El video del foreground service** tiene que seguir accesible en YouTube como **No
   listado** (no Privado) mientras dure la revisión: si el revisor no lo puede abrir, rechaza.
 
@@ -632,10 +646,9 @@ Pendiente:
 Replanificado el 03/08/2026: el rechazo del reloj adelantó su 1.1.0, así que la tanda del
 teléfono quedó sola.
 
-### Release 1 — Wear OS 1.1.0 · ✅ enviada (Envío 13, en revisión)
+### Release 1 — Wear OS 1.1.0 · ✅ APROBADA (11/08/2026)
 
-`wear 350110103`. **Nada que hacer: esperar la aprobación**, hasta 7 días. Se publica sola al
-100% en los 177 países.
+`wear 350110103`. Aprobada y publicándose al 100% en los 177 países.
 
 Corrige el rechazo por WO-V1 (`Button`→`Chip`, tutorial centrado, textos acortados), verificado
 en 192dp y 227dp con la fuente al máximo, y arrastra el `targetSdk 35` y el pausado de los
@@ -645,25 +658,32 @@ Cuando se apruebe: **desinstalar el APK de debug del reloj antes de bajarla de P
 firmado con la debug keystore y Play no puede actualizar sobre otra firma; el error que da no
 explica la causa.
 
-### Release 2 — `:mobile` 1.1.0 · ⏰ CON FECHA LÍMITE: 30 de agosto de 2026
+### Release 2 — `:mobile` 1.1.0 · 🚀 LISTA PARA SUBIR · fecha límite: 31 de agosto de 2026
 
-`mobile 360110000`, **ya listo en el branch `chore/target-sdk-bump`, sin subir**.
+`mobile 360110000`, mergeado a `main` (11/08/2026) y compilado:
+**`release-artifacts/padel-mobile-v1.1.0-vc360110000.aab`**.
 
-Es lo próximo urgente. El Centro de políticas sigue marcando *"La aplicación debe estar
-orientada a Android 16 (nivel 36 de la API) o a una versión posterior — fecha límite 30 ago"*.
-Eso es el artefacto de teléfono, y el envío del reloj **no lo resuelve**. Pasada esa fecha no
-se pueden publicar actualizaciones del teléfono.
+Es lo próximo. El Centro de políticas marca *"La aplicación debe estar orientada a Android 16
+(nivel 36 de la API) o a una versión posterior"*, con fecha límite **31 de agosto**. Eso es el
+artefacto de teléfono, y la aprobación del reloj **no lo resuelve**: hay que subir este AAB.
+Pasada esa fecha no se pueden publicar actualizaciones del teléfono.
 
-> **⚠️ Dependencia entre las dos releases.** Una actualización se publica solo si se aprueban
-> **todos** los cambios del envío, así que mientras el artefacto de Wear OS esté rechazado el
-> teléfono **no puede publicar** — ni la ficha ni el AAB. La release 2 está bloqueada detrás de
-> la aprobación del reloj.
->
-> El reloj ya consumió dos ciclos de revisión (hasta 7 días cada uno) y quedan ~25 días. Si el
-> `350110103` **no está aprobado alrededor del 20 de agosto**, hay que desbloquear el teléfono
-> por su cuenta: *Configuración avanzada → Tipos de versión → Wear OS by Google → Gestionar →
-> desmarcar "Activar"*, publicar mobile 1.1.0, y volver a activar el form factor del reloj
-> después. Es reversible y no borra la ficha de Wear OS.
+La dependencia que bloqueaba esta release **quedó resuelta**: el artefacto de Wear OS ya está
+aprobado, así que el envío del teléfono no arrastra nada rechazado. El plan de contingencia de
+desactivar el form factor de Wear OS alrededor del 20 de agosto ya no hace falta.
+
+**Verificado sobre el AAB generado** (11/08/2026):
+
+| Qué | Resultado |
+|-----|-----------|
+| `versionCode` / `versionName` | `360110000` / `1.1.0` |
+| `targetSdk` del manifest (lo que evalúa Play) | **36** ✅ |
+| Firma vs. el bundle publicado | **idéntica** — `5A:39:B2:…:5E:BB` ✅ |
+| `android_wear_capabilities` en recursos | **presente** → arregla el cartel del companion ✅ |
+| Suite completa (`:shared` + `:mobile` + `:wear`) | verde |
+| Edge-to-edge en teléfono real | ✅ verificado por uso del build del branch |
+
+SHA-256 del AAB: `30f7ee6afdd9c72a165324bad55ad962a5a9c6a7aea7385b0cfde53cc2aaa948`
 
 Contenido, todo ya commiteado y con la suite en verde:
 
@@ -674,10 +694,10 @@ Contenido, todo ya commiteado y con la suite en verde:
 
 Antes de subirla:
 
-- **Probar el edge-to-edge en el teléfono** — es lo único que ningún test cubre. Los tres
-  puntos de riesgo: Ajustes y el detalle de partido scrolleados hasta el fondo, y la hoja de
-  carga manual con el teclado abierto.
-- Generar el AAB: `./gradlew :mobile:bundleRelease` y archivarlo en `release-artifacts/`
+- ✅ **Probar el edge-to-edge en el teléfono** — era lo único que ningún test cubre (los
+  screenshot tests de Paparazzi no renderizan la Activity, así que no ven las barras del
+  sistema). Cubierto por uso real del build del branch en el teléfono.
+- ✅ Generar el AAB y archivarlo en `release-artifacts/`
 - Revisar el checklist de `publishing-guide.md` §9
 - Se sube al track de **teléfono** (el selector por defecto), no al de Wear OS
 

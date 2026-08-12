@@ -12,7 +12,7 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 |
 | wear | 350110103 | 1.1.0 | 35 | ✅ Publicada (11/08/2026, Envío 13) |
 | mobile | 360110100 | 1.1.0 | **36** | ✅ Publicada (12/08/2026, Envío 14) |
-| wear | **350110203** | 1.1.0 | 35 | **Listo para subir** — sin bloqueos |
+| wear | **350110203** | 1.1.0 | 35 | **En revisión** (Envío 15, 12/08/2026) |
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos
@@ -181,6 +181,20 @@ Resumen de publicación → **Actividad de envíos**. Lista un renglón por env�
 canales y estado, y la flechita de la derecha abre el detalle con el `versionCode` incluido.
 Subir un bundle y enviar a revisión son cosas **distintas**: se puede subir varias veces y enviar
 una sola, así que las subidas fallidas no aparecen acá — y si no aparecen, no se enviaron.
+
+### Wear OS y teléfono son releases separadas
+
+Con Wear OS configurado como **tipo de versión** propio, cada form factor tiene su release de
+Producción independiente. Al crear la del reloj:
+
+- En **"Versión anterior → No incluido"** aparece solo el bundle de reloj anterior (el que se
+  reemplaza) y ahí **tiene que quedarse**: no hay que apretarle "Incluir". Si además apareciera el
+  bundle del **teléfono**, ese sí hay que incluirlo — dejarlo fuera lo despublica.
+- En **"Cambios en tus dispositivos admitidos"** el único factor de forma debe ser **Wearable**, y
+  la columna *"Dispositivos que ya no son compatibles"* debe dar **0**.
+- En **Actividad de envíos** los envíos del reloj figuran como **"Producción (Wear OS)"** y los del
+  teléfono como **"Producción"** a secas. Es la forma más rápida de auditar que un envío no se
+  llevó puesto el otro form factor.
 
 ### Si cambiás el bundle después de abrir el borrador
 

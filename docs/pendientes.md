@@ -332,7 +332,7 @@ las pantallas con la fuente en Largest, no solo las dos señaladas.
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 → "Sustituida por otra versión" |
 | wear | 350110103 | 1.1.0 | 35 | ✅ Publicada (11/08/2026 04:00) — Envío 13, 100% |
 | mobile | 360110100 | 1.1.0 | **36** | ✅ **Publicada** (12/08/2026) — Envío 14, 100% |
-| wear | **350110203** | **1.1.0** | **35** | **Listo para subir** — fix del partido duplicado |
+| wear | **350110203** | **1.1.0** | **35** | **En revisión** — Envío 15, 12/08/2026 17:49, 100% |
 
 Con *Publicación gestionada desactivada*, el bundle aprobado se publica automáticamente al 100%
 en los 177 países en cuanto Google lo apruebe (plazo estimado: 7 días).
@@ -770,7 +770,7 @@ Antes de subirla:
 - Revisar el checklist de `publishing-guide.md` §9
 - Se sube al track de **teléfono** (el selector por defecto), no al de Wear OS
 
-### Release 3 — Wear OS: el partido duplicado y su duración · 🚀 CÓDIGO LISTO
+### Release 3 — Wear OS: el partido duplicado y su duración · ✅ ENVIADA (Envío 15, en revisión)
 
 `wear 350110203`, compilado y archivado en
 **`release-artifacts/padel-wear-v1.1.0-vc350110203.aab`**
@@ -782,9 +782,14 @@ Arregla el bug de la sección 4, que tenía **dos síntomas del mismo origen**: 
 el historial y la duración disparatada (se vio una de 85h 30min). Las **cuatro** piezas del fix
 están detalladas en esa sección.
 
-**Sin bloqueos para enviarlo.** El Envío 14 (mobile `360110100`) se aprobó el 12/08/2026, así que
-el reloj va solo: no comparte envío con nada que tenga fecha límite. Con esa aprobación quedó
-cerrado además el requisito de `targetSdk 36`, que vencía el 31 de agosto.
+**Enviado el 12/08/2026 17:49 (Envío 15).** Producción → Wear OS, 100%, 75 wearables. Verificado
+antes de enviar: un solo ítem en "Cambios en revisión" (Producción (Wear OS) `350110203`), el
+`350110103` correctamente en "No incluido", el único factor de forma **Wearable** y **0
+dispositivos que dejan de ser compatibles**. Única advertencia: la de símbolos de depuración
+nativos, opcional.
+
+Fue posible enviarlo solo porque el Envío 14 (mobile `360110100`) ya estaba aprobado, así que el
+reloj no comparte envío con nada que tenga fecha límite.
 
 #### ✅ Verificado en emulador (12/08/2026)
 

@@ -786,17 +786,46 @@ están detalladas en esa sección.
 el reloj va solo: no comparte envío con nada que tenga fecha límite. Con esa aprobación quedó
 cerrado además el requisito de `targetSdk 36`, que vencía el 31 de agosto.
 
-**Verificación necesaria** — reloj **y** teléfono conectados a la vez. Antes de instalar,
-resetear el partido en el reloj (ver la nota de migración de la sección 4):
+#### ✅ Verificado en emulador (12/08/2026)
 
-1. Terminar un partido y cerrar la app **sin** tocar "Jugar de nuevo" ni "Nuevo partido".
-2. Anotar la duración que muestra el teléfono.
-3. Reabrir la app del reloj.
-4. Confirmar que sigue habiendo **una** entrada…
-5. …y que la **duración no cambió** respecto del paso 2.
-6. Con el teléfono **apagado o desvinculado**: terminar un partido, reabrir la app del reloj,
-   volver a conectar el teléfono, y confirmar que el partido llega **con los golpes**. Este paso
-   cubre la regresión que el id determinístico habría introducido sin la pieza (2).
+No hizo falta emparejar un teléfono. **La cola de sincronización del reloj es un punto de
+observación mejor que el historial del teléfono**: persiste cada `Match` serializado en JSON y,
+sin nodo conectado, `isMobileReachable()` devuelve false y no se vacía. Se lee con
+`adb shell run-as com.gonzalocamera.padelcounter cat files/datastore/wear_sync_queue.preferences_pb`
+y muestra exactamente qué encoló el reloj — id, timestamps y golpes — en vez del resultado
+indirecto.
+
+Partido de prueba en `Wear_OS_Large_Round`: al mejor de 1 set, ganado 6-0.
+
+| Escenario | Partidos en la cola | `finishedAt` |
+|-----------|--------------------|--------------|
+| Al terminar el partido | 1 — id `1786564407024-60` | `1786564721924` (5m 15s, real) |
+| **Código nuevo**, 3 arranques en frío | **1** (sin cambios) | **sin cambios** |
+| **Código viejo** (`cc38f16`), 1 arranque en frío | **2** — el segundo con id UUID `f460ac3f-…` | **`1786564902921`** → 8m 16s |
+| Código nuevo otra vez, 2 arranques más | sigue en 2, **no crece** | sin cambios |
+
+El contrafactual es lo que le da valor: instalando el build anterior **sobre el mismo estado**, un
+único arranque en frío reprodujo el bug — `startedAt` idéntico, `finishedAt` 3 minutos más tarde
+(justo el tiempo transcurrido hasta reabrir la app) y una fila nueva con id aleatorio. Es el
+mecanismo del partido de 85h en miniatura, y confirma que la prueba **detecta** el defecto en vez
+de solo pasar.
+
+Truco necesario en el emulador: `adb shell svc power stayon true`. Sin eso la pantalla del reloj
+se duerme, los taps se pierden y hasta abre los ajustes del sistema.
+
+#### Lo que queda por verificar en hardware
+
+Dos cosas que el emulador no cubre, ninguna bloqueante:
+
+- **Los golpes.** `strokesPerSet` vino `null` porque el emulador no genera datos de acelerómetro.
+  El mecanismo por el que se perdían exigía un **segundo** encolado, y eso es justo lo que quedó
+  demostrado que ya no ocurre, así que está cubierto por implicación — pero conviene confirmarlo
+  con el reloj real.
+- **El lado del teléfono** (que no aparezca la fila duplicada). Es consecuencia de lo anterior más
+  el `INSERT OR IGNORE`, que ya existía y no se tocó.
+
+Antes de instalar en el reloj real, resetear el partido en curso (ver la nota de migración de la
+sección 4).
 
 ### Release 4 — migración de toolchain
 

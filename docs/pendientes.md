@@ -658,8 +658,10 @@ rechazos. El procedimiento que sí funciona está en la sección del segundo rec
 - **Capturas de teléfono con relojes viejos.** Las posiciones 6, 7 y 8 de "Capturas de
   pantalla de teléfonos" son screenshots de reloj del **diseño anterior al rediseño
   negro-oro** (marzo 2026). Están publicadas hoy. Se decidió no tocarlas en esta entrega.
-- **Descripción de la ficha.** Hoy describe solo la app de teléfono. WO-G2 pide listar las
-  funciones principales; cuando el reloj esté aprobado conviene mencionarlo.
+- ~~**Descripción de la ficha.** Hoy describe solo la app de teléfono.~~ **Desactualizado**:
+  revisado el 12/08/2026, la descripción **ya menciona el reloj** desde la primera línea
+  ("anotá desde tu reloj Wear OS durante el juego") y tiene una sección `EN EL RELOJ`. WO-G2
+  cumplido. Lo que queda es de posicionamiento, no de contenido → ver sección 7.
 - **Canal de prueba interna de Wear OS.** Quedó sin testers asignados, así que no distribuye a
   nadie. Si se quiere usar más adelante, hay que crear la lista.
 
@@ -687,6 +689,68 @@ Pendiente:
   está.
 - **El video del foreground service** tiene que seguir accesible en YouTube como **No
   listado** (no Privado) mientras dure la revisión: si el revisor no lo puede abrir, rechaza.
+
+---
+
+## 7. ASO — que la app se encuentre más fácil
+
+**Nada de esta sección requiere compilar ni publicar una versión nueva.** Todo se edita en
+*Play Console → Crecimiento → Presencia en Play Store → Ficha principal*. Sí pasa por revisión
+de Google, como envío propio: en Actividad de envíos figura como **"Ficha de Play Store"** (así
+viajó el Envío 10 del 31/07).
+
+**Estado medido el 12/08/2026:** `10+` descargas, **sin reseñas ni valoración**. Categoría
+Deportes.
+
+### Lo que ya está bien — verificado sobre la ficha real
+
+No hace falta tocarlo, y conviene anotarlo para no "arreglar" lo que funciona:
+
+- La **descripción larga menciona el reloj desde la primera línea** y tiene sección `EN EL RELOJ`.
+- Las **5 primeras capturas son del diseño negro-oro actual**, con titulares por pantalla
+  ("EN LA CANCHA", "ANÁLISIS", "TU PROGRESO", "HISTORIAL", "EN SEGUNDOS").
+- **Seguridad de datos**: "No se recogen datos" / "No se comparten con terceros" — es cierto y
+  es un argumento de venta en una app de deporte.
+- Las **notas de la versión** están al día.
+
+### Cómo rankea Play en 2026 (lo que condiciona todo lo demás)
+
+- **No existe campo de keywords.** Se indexan **título**, **descripción corta** y **descripción
+  larga**; el título es el factor con más peso.
+- Entre 2024 y 2026 el algoritmo se corrió **de señales pre-install** (keywords, ratings,
+  descargas brutas) **a señales post-install**: retención, tasa de conversión desde la búsqueda y
+  relevancia semántica.
+- **Crashes y ANR pesan en el ranking.** Los fixes de sincronización también son ASO.
+
+Consecuencia práctica: la metadata te mete en la carrera, pero lo que sube posiciones es que
+quien instala **se quede**.
+
+### Acciones, en orden de impacto
+
+1. **Reseñas.** Es lo que más falta y ninguna optimización lo compensa: con 0 valoraciones la app
+   es invisible y no hay señal de calidad. Diez reseñas reales de gente que juega valen más que
+   cualquier otro ítem de esta lista.
+2. **Título** (máx **30** caracteres). Hoy `Simple Padel Score` (18) — 12 desperdiciados, y todo
+   en inglés mientras el público busca "marcador de padel". Propuesta:
+   **`Simple Padel Score: Marcador`** (28). Con 10 descargas el costo de cambiar el nombre es
+   nulo; más adelante no.
+3. **Descripción corta** (máx **80**). No se ve en la web, hay que abrirla en Console. Es campo
+   **indexado** y es lo primero que se lee en el móvil.
+4. **Descripción larga** (máx 4000). Ya dice lo correcto; falta que use los términos con los que
+   la gente busca de verdad: *contador*, *puntos*, *tie break*, *punto de oro*, *golpes*,
+   *smartwatch*, además de los que ya tiene.
+5. **Capturas 6, 7 y 8**: confirmar si siguen siendo las del diseño viejo (ver sección 5). Las
+   primeras cinco están bien; estas no se ven sin scrollear el carrusel.
+6. **Badge "AI" en las capturas de teléfono.** Las cinco lo muestran, y son screenshots reales de
+   la app con marco y titular. Verificar que la declaración de IA esté aplicada solo donde
+   corresponde (las 4 imágenes de tablet, sección 5) y no a capturas propias.
+
+### Lo que NO conviene hacer
+
+**Pagar Google Ads App Campaigns.** No hay mínimo formal, pero el piso realista para que el
+Smart Bidding tenga datos es **USD 20–50 por día** (600–1500 al mes). Para una app gratuita sin
+monetización es tirar plata: se compran instalaciones que además no retienen, y la retención es
+justo la señal que hoy manda en el ranking.
 
 ---
 

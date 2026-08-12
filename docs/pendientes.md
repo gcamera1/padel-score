@@ -331,7 +331,7 @@ las pantallas con la fuente en Largest, no solo las dos señaladas.
 | wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 → "Sustituida por otra versión" |
 | wear | 350110103 | 1.1.0 | 35 | ✅ Publicada (11/08/2026 04:00) — Envío 13, 100% |
-| mobile | **360110100** | **1.1.0** | **36** | **En revisión** — Envío 14, 11/08/2026 10:57, 100% |
+| mobile | 360110100 | 1.1.0 | **36** | ✅ **Publicada** (12/08/2026) — Envío 14, 100% |
 | wear | **350110203** | **1.1.0** | **35** | **Listo para subir** — fix del partido duplicado |
 
 Con *Publicación gestionada desactivada*, el bundle aprobado se publica automáticamente al 100%
@@ -707,7 +707,7 @@ Cuando se apruebe: **desinstalar el APK de debug del reloj antes de bajarla de P
 firmado con la debug keystore y Play no puede actualizar sobre otra firma; el error que da no
 explica la causa.
 
-### Release 2 — `:mobile` 1.1.0 · ✅ ENVIADA (Envío 14, 11/08/2026 10:57, en revisión)
+### Release 2 — `:mobile` 1.1.0 · ✅ PUBLICADA (12/08/2026)
 
 `mobile 360110100`, mergeado a `main` (11/08/2026) y compilado:
 **`release-artifacts/padel-mobile-v1.1.0-vc360110100.aab`**.
@@ -782,11 +782,9 @@ Arregla el bug de la sección 4, que tenía **dos síntomas del mismo origen**: 
 el historial y la duración disparatada (se vio una de 85h 30min). Las **cuatro** piezas del fix
 están detalladas en esa sección.
 
-> **⏳ Cuándo enviarlo.** Conviene esperar a que se apruebe el Envío 14 (mobile `360110100`).
-> Mientras hay un envío en revisión, los cambios nuevos se acumulan y el próximo envío puede
-> arrastrarlos juntos: si el reloj tuviera un problema, se llevaría puesta la release del
-> teléfono, que es la que tiene fecha límite (31 de agosto). Una vez publicado el teléfono, el
-> reloj va solo y sin riesgo compartido.
+**Sin bloqueos para enviarlo.** El Envío 14 (mobile `360110100`) se aprobó el 12/08/2026, así que
+el reloj va solo: no comparte envío con nada que tenga fecha límite. Con esa aprobación quedó
+cerrado además el requisito de `targetSdk 36`, que vencía el 31 de agosto.
 
 **Verificación necesaria** — reloj **y** teléfono conectados a la vez. Antes de instalar,
 resetear el partido en el reloj (ver la nota de migración de la sección 4):

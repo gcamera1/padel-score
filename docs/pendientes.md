@@ -706,7 +706,12 @@ Deportes.
 
 No hace falta tocarlo, y conviene anotarlo para no "arreglar" lo que funciona:
 
-- La **descripción larga menciona el reloj desde la primera línea** y tiene sección `EN EL RELOJ`.
+- La **descripción larga es sólida** (leída completa el 12/08/2026). Menciona el reloj desde la
+  primera línea, se divide en `EN EL RELOJ` / `EN EL TELÉFONO`, y ya indexa los términos que
+  importan: *marcador*, *Punto de Oro*, *Deuce/Ventaja*, *Punto Estrella*, *tie-break*, *súper
+  tie-break*, *golpes*, *PGG*, *desgaste*, *categoría*, *historial*, *estadísticas*, *Wear OS*.
+  Cierra con el argumento de privacidad ("sin cuentas, sin anuncios y sin conexión a internet"),
+  que es diferencial real y coincide con la sección Seguridad de datos.
 - Las **5 primeras capturas son del diseño negro-oro actual**, con titulares por pantalla
   ("EN LA CANCHA", "ANÁLISIS", "TU PROGRESO", "HISTORIAL", "EN SEGUNDOS").
 - **Seguridad de datos**: "No se recogen datos" / "No se comparten con terceros" — es cierto y
@@ -736,9 +741,19 @@ quien instala **se quede**.
    nulo; más adelante no.
 3. **Descripción corta** (máx **80**). No se ve en la web, hay que abrirla en Console. Es campo
    **indexado** y es lo primero que se lee en el móvil.
-4. **Descripción larga** (máx 4000). Ya dice lo correcto; falta que use los términos con los que
-   la gente busca de verdad: *contador*, *puntos*, *tie break*, *punto de oro*, *golpes*,
-   *smartwatch*, además de los que ya tiene.
+4. **Descripción larga** (máx 4000). Está bien escrita y ya cubre casi todo el vocabulario del
+   deporte. Lo que falta son cuatro huecos concretos de búsqueda, todos agregables sin reescribir
+   nada:
+
+   - **"padel" sin tilde.** El texto usa siempre *pádel* (correcto), pero muchísima gente busca
+     escribiendo **padel**. El título ya lo tiene sin tilde; conviene que la descripción incluya
+     las dos formas al menos una vez cada una.
+   - **"smartwatch"**, como sinónimo de *reloj* / *Wear OS*. Es como busca quien todavía no sabe
+     que su reloj corre Wear OS.
+   - **Nombres de dispositivo**: *Galaxy Watch*, *Pixel Watch*. Son búsquedas frecuentes del tipo
+     "app padel galaxy watch" y hoy no matchean.
+   - **"contador de puntos" / "anotador"**. Hoy *contador* aparece solo en "Contador de golpes";
+     como frase de búsqueda para el marcador no está.
 5. **Capturas 6, 7 y 8**: confirmar si siguen siendo las del diseño viejo (ver sección 5). Las
    primeras cinco están bien; estas no se ven sin scrollear el carrusel.
 6. **Badge "AI" en las capturas de teléfono.** Las cinco lo muestran, y son screenshots reales de

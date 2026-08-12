@@ -47,6 +47,7 @@ class PadelRepository(private val context: Context) {
         val BEST_OF = intPreferencesKey("best_of")
         val SETS_HISTORY = stringPreferencesKey("sets_history")
         val MATCH_STARTED_AT = longPreferencesKey("match_started_at")
+        val MATCH_FINISHED_AT = longPreferencesKey("match_finished_at")
 
         val HAS_SEEN_WALKTHROUGH = booleanPreferencesKey("has_seen_walkthrough")
         val STARTUP_COMPANION_PROMPT_COUNT = intPreferencesKey("startup_companion_prompt_count")
@@ -154,8 +155,53 @@ class PadelRepository(private val context: Context) {
         }
     }
 
-    val matchStartedAt: Flow<Long?> = context.dataStore.data.map { prefs ->
-        prefs[Keys.MATCH_STARTED_AT]
+    /**
+     * Instantes de inicio y fin de un partido terminado.
+     *
+     * @param firstTime `true` solo la primera vez que este partido se marca como terminado.
+     *   En los re-disparos del efecto vale `false`, y ahí **no hay que volver a encolarlo**.
+     */
+    data class MatchTimestamps(
+        val startedAt: Long,
+        val finishedAt: Long,
+        val firstTime: Boolean,
+    )
+
+    /**
+     * Fija —y devuelve— los timestamps del partido que acaba de terminar. Es **idempotente**:
+     * si ya estaban persistidos, devuelve los mismos valores en vez de recalcularlos.
+     *
+     * Esto es lo que evita que la duración crezca sola. El efecto que sincroniza el partido
+     * se vuelve a disparar en cada arranque en frío mientras el estado tenga un partido
+     * terminado sin resetear; con `System.currentTimeMillis()` en el sitio de la llamada,
+     * cada reapertura movía `finishedAt` hasta ese momento y `startedAt` se quedaba en el
+     * valor original. Así se llegó a ver un partido de 85h 30min: la duración no medía el
+     * partido, medía cuánto tardaste en volver a abrir la app.
+     *
+     * `MATCH_STARTED_AT` se rellena acá también por si falta (partido de una versión
+     * anterior); sin él, el id derivado del contenido cambiaría en cada reenvío.
+     *
+     * El `firstTime` del resultado es la defensa principal: corta el reenvío de raíz. Sin él,
+     * el re-disparo encolaría el partido otra vez y —como `StrokeCounter` vive en memoria y
+     * un arranque en frío lo deja vacío— ese segundo envío iría **sin los golpes**. Al
+     * compartir path con el original, le pisaría los datos al partido en el teléfono si el
+     * primer envío todavía no había llegado.
+     */
+    suspend fun markMatchFinished(): MatchTimestamps {
+        val now = System.currentTimeMillis()
+        // Se lee antes de escribir: `edit` no informa si la clave ya estaba. No hay carrera
+        // real —el único llamador está detrás del guard `matchSynced`— y si la hubiera, el
+        // peor caso es no encolar un partido que ya está en la cola.
+        val alreadyFinished = context.dataStore.data.first()[Keys.MATCH_FINISHED_AT] != null
+        val prefs = context.dataStore.edit { p ->
+            if (p[Keys.MATCH_STARTED_AT] == null) p[Keys.MATCH_STARTED_AT] = now
+            if (p[Keys.MATCH_FINISHED_AT] == null) p[Keys.MATCH_FINISHED_AT] = now
+        }
+        return MatchTimestamps(
+            startedAt = prefs[Keys.MATCH_STARTED_AT] ?: now,
+            finishedAt = prefs[Keys.MATCH_FINISHED_AT] ?: now,
+            firstTime = !alreadyFinished,
+        )
     }
 
     suspend fun setKeepScreenOn(on: Boolean) = save(current().copy(keepScreenOn = on))
@@ -194,6 +240,9 @@ class PadelRepository(private val context: Context) {
         )
         context.dataStore.edit { prefs ->
             prefs[Keys.MATCH_STARTED_AT] = System.currentTimeMillis()
+            // Imprescindible: si el fin del partido anterior quedara persistido, el partido
+            // nuevo lo heredaría y se guardaría con una duración negativa o absurda.
+            prefs.remove(Keys.MATCH_FINISHED_AT)
         }
         // Conteo de golpes: arrancar de cero para el nuevo partido.
         clearStrokeBackup()

@@ -29,9 +29,13 @@ class WearSyncSender(
 
         for (match in pending) {
             try {
+                // Sin timestamp a propósito. El `DataClient` deduplica por path + payload:
+                // reenviar el mismo partido no genera evento y el teléfono ni se entera.
+                // Un `System.currentTimeMillis()` acá hacía que cada envío fuese un DataItem
+                // distinto aunque el partido fuera idéntico, anulando esa primera defensa.
+                // El teléfono nunca leyó este campo: `SyncBridgeListener` solo usa "match_data".
                 val request = PutDataMapRequest.create("/padel-score/match/${match.id}").apply {
                     dataMap.putByteArray("match_data", encodeMatch(match))
-                    dataMap.putLong("timestamp", System.currentTimeMillis())
                 }.asPutDataRequest().setUrgent()
 
                 dataClient.putDataItem(request).await()

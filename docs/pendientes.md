@@ -330,8 +330,9 @@ las pantallas con la fuente en Largest, no solo las dos señaladas.
 | mobile | 350100000 | 1.0.0 | 35 | Producción, 177 países (publicado 30/07/2026) |
 | wear | 340100003 | 1.0.0 | 34 | Rechazada (Envío 11) |
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 → "Sustituida por otra versión" |
-| wear | **350110103** | **1.1.0** | **35** | ✅ **Publicada** (11/08/2026 04:00) — Envío 13, 100% |
+| wear | 350110103 | 1.1.0 | 35 | ✅ Publicada (11/08/2026 04:00) — Envío 13, 100% |
 | mobile | **360110100** | **1.1.0** | **36** | **En revisión** — Envío 14, 11/08/2026 10:57, 100% |
+| wear | **350110203** | **1.1.0** | **35** | **Listo para subir** — fix del partido duplicado |
 
 Con *Publicación gestionada desactivada*, el bundle aprobado se publica automáticamente al 100%
 en los 177 países en cuanto Google lo apruebe (plazo estimado: 7 días).
@@ -523,7 +524,7 @@ próximo ciclo de requisitos de Play va a empujar igual. Mejor hacerlo en frío 
 
 El primero es un bug real que corrompe datos; el resto no bloquea nada.
 
-### 🐛 El reloj re-sincroniza el partido terminado en cada arranque en frío
+### 🐛 El reloj re-sincroniza el partido terminado en cada arranque en frío — ✅ RESUELTO (11/08/2026)
 
 **Encontrado el 5/8/2026** mientras se instalaba el build nuevo en el reloj real. Es
 **preexistente**, no lo introdujo el fix de WO-V1.
@@ -578,17 +579,32 @@ nunca un partido olvidado.
 no evita que `finishedAt` se recalcule. Si el primer envío no llegó (teléfono apagado, sin
 batería) y el que entra es el del re-disparo, la única fila que queda tiene la duración basura.
 
-**Arreglo propuesto (dos partes, las dos necesarias):**
+**Arreglo aplicado (11/08/2026) — cuatro piezas.** Al implementarlo aparecieron dos más de las
+dos que estaban planificadas:
 
-1. **Persistir el momento de finalización** (`MATCH_FINISHED_AT`) cuando el partido se cierra, y
-   usar ese valor en vez de `System.currentTimeMillis()`. Eso hace el registro idempotente en
-   ambos campos.
-2. **Id determinístico** derivado del contenido (`startedAt` + `setsScore`) en vez de
+1. **Persistir el momento de finalización** (`MATCH_FINISHED_AT`) y usar ese valor en vez de
+   `System.currentTimeMillis()`. La duración deja de crecer en cada reapertura. Se limpia en
+   `resetMatchWithConfig()` — si no, el partido siguiente heredaría el fin del anterior.
+2. **No reenviar**: `markMatchFinished()` devuelve `firstTime`, y el partido se encola **una sola
+   vez**. Es la defensa principal, y no estaba en el plan original.
+3. **Id determinístico** (`matchId(startedAt, setsScore)` en `:shared`) en vez de
    `UUID.randomUUID()`. Con eso el path del `DataItem` se repite, el `DataClient` deduplica solo,
-   y el `INSERT OR IGNORE` del teléfono pasa a funcionar de verdad como segunda red.
+   y el `INSERT OR IGNORE` del teléfono funciona de verdad como segunda red.
+4. **Sacar el `timestamp` del `dataMap`** en `WearSyncSender`. Era un
+   `System.currentTimeMillis()` que hacía que cada envío fuese un `DataItem` distinto aunque el
+   partido fuera idéntico, anulando la dedup del `DataClient`. El teléfono nunca lo leyó:
+   `SyncBridgeListener` solo usa `"match_data"`.
 
-Con (1) hecho, el id de (2) se deriva de datos completamente estables. Alternativa más chica pero
-menos robusta que ninguna de las dos: persistir un flag de "ya sincronizado" junto al estado.
+**Por qué (2) es imprescindible y no bastaba con (1) + (3).** `StrokeCounter` es un singleton
+**en memoria**, y el efecto lo resetea después de encolar. En un arranque en frío
+`StrokeCounter.snapshot()` vuelve vacío, así que el reenvío llevaría `strokesPerSet = null`.
+Compartiendo path con el original —que es justo lo que logra (3)— ese segundo envío le **pisaría
+los golpes** al partido si el primero todavía no había llegado al teléfono. El id determinístico
+sin (2) convertía un bug de duplicados en un bug de pérdida de datos.
+
+**Nota de migración:** un partido terminado que ya se hubiera sincronizado con el id viejo (UUID)
+y siga sin resetear entraría **una vez más** con el id nuevo, porque `MATCH_FINISHED_AT` no
+existía. A partir de ahí queda estable. Se evita reseteando el partido antes de actualizar.
 
 **Lo que NO hace falta tocar:** las estadísticas no agregan duración (solo usan `finishedAt` para
 ordenar), así que un partido con duración corrupta no ensucia ningún promedio. Sí se ve en el
@@ -754,23 +770,35 @@ Antes de subirla:
 - Revisar el checklist de `publishing-guide.md` §9
 - Se sube al track de **teléfono** (el selector por defecto), no al de Wear OS
 
-### Release 3 — Wear OS 1.1.1: el partido duplicado y su duración
+### Release 3 — Wear OS: el partido duplicado y su duración · 🚀 CÓDIGO LISTO
 
-`wear 350111003` (siguiente build del esquema). Arregla el bug de la sección 4, que tiene **dos
-síntomas del mismo origen**: la fila duplicada en el historial y la duración disparatada (se vio
-una de 85h 30min). Las dos partes del fix están detalladas en esa sección — persistir
-`MATCH_FINISHED_AT` **y** hacer el id determinístico. Con una sola no basta.
+`wear 350110203`, compilado y archivado en
+**`release-artifacts/padel-wear-v1.1.0-vc350110203.aab`**
+(SHA-256 `bb89f503faf809dcd2db8073907ac62598b93964276797dae72d9d002aa6f518`).
+El versionName sigue en **1.1.0**: es compartido con `:mobile`, que está en revisión con ese
+nombre, y subirlo por un bugfix del reloj arrastraría al teléfono sin motivo.
 
-Va **después** de la 1.1.0 (ya aprobada), no mezclado con ella: toca el camino de sincronización
-y no tenía nada que ver con el rechazo.
+Arregla el bug de la sección 4, que tenía **dos síntomas del mismo origen**: la fila duplicada en
+el historial y la duración disparatada (se vio una de 85h 30min). Las **cuatro** piezas del fix
+están detalladas en esa sección.
 
-Verificación necesaria — reloj **y** teléfono conectados a la vez:
+> **⏳ Cuándo enviarlo.** Conviene esperar a que se apruebe el Envío 14 (mobile `360110100`).
+> Mientras hay un envío en revisión, los cambios nuevos se acumulan y el próximo envío puede
+> arrastrarlos juntos: si el reloj tuviera un problema, se llevaría puesta la release del
+> teléfono, que es la que tiene fecha límite (31 de agosto). Una vez publicado el teléfono, el
+> reloj va solo y sin riesgo compartido.
+
+**Verificación necesaria** — reloj **y** teléfono conectados a la vez. Antes de instalar,
+resetear el partido en el reloj (ver la nota de migración de la sección 4):
 
 1. Terminar un partido y cerrar la app **sin** tocar "Jugar de nuevo" ni "Nuevo partido".
-2. Reabrir la app del reloj.
-3. Confirmar en el historial del teléfono que sigue habiendo **una** entrada…
-4. …y que su **duración no cambió** entre el paso 1 y el paso 3. Esto último es lo que el fix
-   viejo (solo id determinístico) no cubría.
+2. Anotar la duración que muestra el teléfono.
+3. Reabrir la app del reloj.
+4. Confirmar que sigue habiendo **una** entrada…
+5. …y que la **duración no cambió** respecto del paso 2.
+6. Con el teléfono **apagado o desvinculado**: terminar un partido, reabrir la app del reloj,
+   volver a conectar el teléfono, y confirmar que el partido llega **con los golpes**. Este paso
+   cubre la regresión que el id determinístico habría introducido sin la pieza (2).
 
 ### Release 4 — migración de toolchain
 

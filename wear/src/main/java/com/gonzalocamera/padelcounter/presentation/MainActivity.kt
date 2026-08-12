@@ -57,6 +57,7 @@ import com.gonzalocamera.padelcounter.shared.starPointAdvantageLevel
 import com.gonzalocamera.padelcounter.shared.isMatchFinished
 import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchOrigin
+import com.gonzalocamera.padelcounter.shared.matchId
 import com.gonzalocamera.padelcounter.shared.Winner
 import com.gonzalocamera.padelcounter.sync.WearSyncQueue
 import com.gonzalocamera.padelcounter.sync.WearSyncSender
@@ -71,7 +72,6 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import androidx.core.content.ContextCompat
 import kotlin.math.sqrt
-import java.util.UUID
 
 /**
  * Layout metrics calculated from screen size and shape (round vs square).
@@ -251,7 +251,6 @@ private fun PadelApp() {
     val syncSender = remember { WearSyncSender(context, syncQueue) }
     val scope = rememberCoroutineScope()
     val state by repo.stateFlow.collectAsState(initial = PadelState())
-    val matchStartedAt by repo.matchStartedAt.collectAsState(initial = null)
     val hasSeenWalkthrough by repo.hasSeenWalkthrough.collectAsState(initial = true)
 
     LaunchedEffect(state.keepScreenOn) {
@@ -303,22 +302,30 @@ private fun PadelApp() {
             val strokes = if (state.strokeCountingEnabled) {
                 StrokeCounter.snapshot().takeIf { it.isNotEmpty() }
             } else null
-            val match = Match(
-                id = UUID.randomUUID().toString(),
-                startedAt = matchStartedAt ?: System.currentTimeMillis(),
-                finishedAt = System.currentTimeMillis(),
-                setsScore = state.setsHistory,
-                tieBreakUsed = state.setsHistory.any { it[0] == 7 || it[1] == 7 },
-                decider = state.decider,
-                goldenPoint = (state.scoringMode == ScoringMode.GOLDEN_POINT),
-                scoringMode = state.scoringMode,
-                winner = if (state.mySets > state.oppSets) Winner.MY else Winner.OPP,
-                origin = MatchOrigin.WEAR,
-                bestOf = state.bestOf,
-                strokesPerSet = strokes
-            )
-            syncQueue.enqueue(match)
-            syncSender.trySendPending()
+            // Este efecto se vuelve a disparar en cada arranque en frío mientras haya un
+            // partido terminado sin resetear. Los timestamps quedan persistidos para que la
+            // duración no crezca en cada reapertura, y `firstTime` corta el reenvío: el
+            // partido se encola una sola vez. Si el teléfono no estaba, la cola lo conserva
+            // y el `trySendPending()` del arranque lo despacha cuando vuelva.
+            val timestamps = repo.markMatchFinished()
+            if (timestamps.firstTime) {
+                val match = Match(
+                    id = matchId(timestamps.startedAt, state.setsHistory),
+                    startedAt = timestamps.startedAt,
+                    finishedAt = timestamps.finishedAt,
+                    setsScore = state.setsHistory,
+                    tieBreakUsed = state.setsHistory.any { it[0] == 7 || it[1] == 7 },
+                    decider = state.decider,
+                    goldenPoint = (state.scoringMode == ScoringMode.GOLDEN_POINT),
+                    scoringMode = state.scoringMode,
+                    winner = if (state.mySets > state.oppSets) Winner.MY else Winner.OPP,
+                    origin = MatchOrigin.WEAR,
+                    bestOf = state.bestOf,
+                    strokesPerSet = strokes
+                )
+                syncQueue.enqueue(match)
+                syncSender.trySendPending()
+            }
             StrokeCounter.reset()
             repo.clearStrokeBackup()
             // Aviso companion al finalizar (máx 3): si no está la app de teléfono.

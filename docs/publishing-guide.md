@@ -13,6 +13,7 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | wear | 350110103 | 1.1.0 | 35 | ✅ Publicada (11/08/2026, Envío 13) |
 | mobile | 360110100 | 1.1.0 | **36** | ✅ Publicada (12/08/2026, Envío 14) |
 | wear | **350110203** | 1.1.0 | 35 | **En revisión** (Envío 15, 12/08/2026) |
+| mobile | **360120000** | **1.2.0** | 36 | **Pendiente de subir** (Envío 16) — invitación a calificar |
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos

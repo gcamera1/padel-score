@@ -54,6 +54,17 @@ private fun intensityHint(i: PointIntensity): String = when (i) {
     PointIntensity.HIGH -> "Puntos largos y games eternos, con muchos deuces y ventajas."
 }
 
+/**
+ * El valor sigue siendo la fracción de pelotas que pasaron por el jugador; lo que cambia es
+ * cómo se lo muestra. "15% / 25% / 35%" pedía una precisión que nadie puede estimar de
+ * memoria después de un partido: Bajo/Normal/Alto se elige sin pensarlo.
+ */
+private fun involvementLabel(involvement: Float): String = when {
+    involvement <= 0.15f -> "Bajo"
+    involvement >= 0.35f -> "Alto"
+    else -> "Normal"
+}
+
 private fun involvementHint(involvement: Float): String = when {
     involvement <= 0.15f -> "Te metieron en la heladera: la jugaban casi toda a tu compañero."
     involvement >= 0.35f -> "Te buscaron a vos todo el partido, o fuiste el protagonista."
@@ -169,7 +180,7 @@ fun CalculatorScreen(onBack: () -> Unit) {
 
             // --- Involucramiento ---
             Column {
-                SectionHeader("TU INVOLUCRAMIENTO")
+                SectionHeader("TU INVOLUCRAMIENTO EN LOS PUNTOS")
                 Spacer(modifier = Modifier.height(8.dp))
                 val options = listOf(0.15f, 0.25f, 0.35f)
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -178,7 +189,7 @@ fun CalculatorScreen(onBack: () -> Unit) {
                             selected = involvement == opt,
                             onClick = { involvement = opt },
                             shape = SegmentedButtonDefaults.itemShape(i, options.size),
-                        ) { Text("${(opt * 100).roundToInt()}%") }
+                        ) { Text(involvementLabel(opt)) }
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))

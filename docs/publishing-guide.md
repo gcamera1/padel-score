@@ -197,6 +197,31 @@ Producción independiente. Al crear la del reloj:
   teléfono como **"Producción"** a secas. Es la forma más rápida de auditar que un envío no se
   llevó puesto el otro form factor.
 
+### No agrupar cambios de ficha con un binario
+
+Play revisa **junto** todo lo que mandás en un mismo envío. Los cambios de ficha (nombre,
+descripción, capturas) y una release de binario tienen riesgos y costos de arreglo muy
+distintos, así que conviene mandarlos en envíos separados:
+
+- El **nombre de la app** es el campo más sensible a política de todos (límite de 30 caracteres
+  y prohibición de keyword stuffing). Si lo rebotan agrupado con un AAB, se frena el AAB también
+  y no sabés cuál de los cambios lo causó.
+- Un rechazo de ficha se arregla editando texto y reenviando, gratis. Un rechazo de binario
+  puede costar rebuild y pelea con el "código de versión ya usado".
+
+**Orden recomendado: primero la ficha, después el binario.** Además de lo anterior, la
+invitación a calificar de la 1.2.0 manda tráfico a la ficha: si el binario sale primero, la
+primera camada de usuarios que va a calificar aterriza en la vidriera vieja.
+
+**Si lo que querés es que todo salga a la vez**, agrupar envíos no te lo da: con *Publicación
+gestionada* desactivada cada cambio se publica solo en cuanto se aprueba. Para un go-live
+coordinado hay que **prender Publicación gestionada** (Resumen de publicación, arriba a la
+izquierda).
+
+**El nombre del launcher no viene de la ficha.** Sale de `app_name` en
+`mobile/src/main/res/values/strings.xml` y `wear/.../strings.xml`. Que el título de la tienda sea
+más largo y descriptivo que la etiqueta del icono es lo normal y no hay que sincronizarlos.
+
 ### Si cambiás el bundle después de abrir el borrador
 
 **Revisá el campo "Nombre de la versión".** Play lo autocompleta con el `versionCode` que había

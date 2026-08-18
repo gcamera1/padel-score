@@ -57,11 +57,15 @@ private fun intensityHint(i: PointIntensity): String = when (i) {
 /**
  * El valor sigue siendo la fracción de pelotas que pasaron por el jugador; lo que cambia es
  * cómo se lo muestra. "15% / 25% / 35%" pedía una precisión que nadie puede estimar de
- * memoria después de un partido: Bajo/Normal/Alto se elige sin pensarlo.
+ * memoria después de un partido.
+ *
+ * Poco/Mucho y no Bajo/Alto: acá se mide **cuántas** pelotas te llegaron, que es cantidad, no
+ * altura. Además el selector de al lado ya usa Baja/Media/Alta para la intensidad, y dos filas
+ * pegadas con las mismas palabras se confunden.
  */
 private fun involvementLabel(involvement: Float): String = when {
-    involvement <= 0.15f -> "Bajo"
-    involvement >= 0.35f -> "Alto"
+    involvement <= 0.15f -> "Poco"
+    involvement >= 0.35f -> "Mucho"
     else -> "Normal"
 }
 

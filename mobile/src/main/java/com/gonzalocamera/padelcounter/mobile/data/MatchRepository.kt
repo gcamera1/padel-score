@@ -4,6 +4,8 @@ import com.gonzalocamera.padelcounter.shared.AggregateStats
 import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchSummary
 import com.gonzalocamera.padelcounter.shared.PadelState
+import com.gonzalocamera.padelcounter.shared.ReviewPromptState
+import com.gonzalocamera.padelcounter.shared.ReviewSignal
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -17,6 +19,7 @@ interface MatchRepository {
     val currentState: Flow<PadelState?>
     val matchStartedAt: Flow<Long?>
     val userPreferences: Flow<UserPreferences>
+    val reviewPromptState: Flow<ReviewPromptState>
 
     suspend fun insertMatch(match: Match)
 
@@ -27,4 +30,9 @@ interface MatchRepository {
     suspend fun saveCurrentState(state: PadelState, startedAt: Long)
     suspend fun clearCurrentState()
     suspend fun savePreferences(prefs: UserPreferences)
+
+    /** Ancla temporal + puntaje inicial del pedido de calificación. Idempotente. */
+    suspend fun seedReviewPrompt(now: Long)
+    suspend fun recordReviewSignal(signal: ReviewSignal, now: Long)
+    suspend fun saveReviewPromptState(state: ReviewPromptState)
 }

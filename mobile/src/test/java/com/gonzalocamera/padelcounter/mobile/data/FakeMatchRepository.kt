@@ -6,6 +6,10 @@ import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchOrigin
 import com.gonzalocamera.padelcounter.shared.MatchSummary
 import com.gonzalocamera.padelcounter.shared.PadelState
+import com.gonzalocamera.padelcounter.shared.ReviewPolicy
+import com.gonzalocamera.padelcounter.shared.ReviewPromptState
+import com.gonzalocamera.padelcounter.shared.ReviewPromptStatus
+import com.gonzalocamera.padelcounter.shared.ReviewSignal
 import com.gonzalocamera.padelcounter.shared.Winner
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,12 +24,14 @@ class FakeMatchRepository(
     initialCurrentState: PadelState? = null,
     initialMatchStartedAt: Long? = null,
     initialPreferences: UserPreferences = UserPreferences(),
+    initialReviewPromptState: ReviewPromptState = ReviewPromptState(),
 ) : MatchRepository {
 
     private val matchesFlow = MutableStateFlow(initialMatches)
     private val currentStateFlow = MutableStateFlow(initialCurrentState)
     private val matchStartedAtFlow = MutableStateFlow(initialMatchStartedAt)
     private val preferencesFlow = MutableStateFlow(initialPreferences)
+    private val reviewPromptFlow = MutableStateFlow(initialReviewPromptState)
 
     /** When non-null, the next insertMatch call throws this exception. */
     var insertFailure: Throwable? = null
@@ -59,11 +65,14 @@ class FakeMatchRepository(
     override val currentState: Flow<PadelState?> = currentStateFlow.asStateFlow()
     override val matchStartedAt: Flow<Long?> = matchStartedAtFlow.asStateFlow()
     override val userPreferences: Flow<UserPreferences> = preferencesFlow.asStateFlow()
+    override val reviewPromptState: Flow<ReviewPromptState> = reviewPromptFlow.asStateFlow()
 
     override suspend fun insertMatch(match: Match) {
         insertFailure?.let { throw it }
         insertCount++
         matchesFlow.value = matchesFlow.value + match
+        // Igual que MobileRepository: el insert de un partido puntúa según su origen.
+        recordReviewSignal(ReviewPolicy.signalFor(match.origin), System.currentTimeMillis())
     }
 
     override suspend fun insertMatches(matches: List<Match>): Int {
@@ -97,6 +106,37 @@ class FakeMatchRepository(
 
     override suspend fun savePreferences(prefs: UserPreferences) {
         preferencesFlow.value = prefs
+    }
+
+    override suspend fun seedReviewPrompt(now: Long) {
+        if (reviewPromptFlow.value.firstSeenAt > 0L) return
+        reviewPromptFlow.value = reviewPromptFlow.value.copy(
+            firstSeenAt = now,
+            score = ReviewPolicy.seedScore(matchesFlow.value.size),
+        )
+    }
+
+    override suspend fun recordReviewSignal(signal: ReviewSignal, now: Long) {
+        val current = reviewPromptFlow.value
+        if (current.status == ReviewPromptStatus.RATED ||
+            current.status == ReviewPromptStatus.DISMISSED
+        ) {
+            return
+        }
+        if (signal == ReviewSignal.STATS_VIEWED) {
+            val today = ReviewPolicy.dayOf(now)
+            if (current.lastStatsSignalDay == today) return
+            reviewPromptFlow.value = current.copy(
+                score = current.score + signal.points,
+                lastStatsSignalDay = today,
+            )
+            return
+        }
+        reviewPromptFlow.value = current.copy(score = current.score + signal.points)
+    }
+
+    override suspend fun saveReviewPromptState(state: ReviewPromptState) {
+        reviewPromptFlow.value = state
     }
 
     fun seedWinners(winners: List<Winner>, baseTime: Long = 1_700_000_000_000L) {

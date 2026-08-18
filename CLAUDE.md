@@ -51,52 +51,31 @@ Padel Score — a multi-module Android app for tracking padel tennis scores. Com
 Three Gradle modules:
 
 ### `:shared` (pure Kotlin/JVM — no Android dependencies)
-- `PadelState` — immutable data class representing match state
-- `PadelLogic` — pure functions for scoring (`addPointToMy`, `addPointToOpp`, `subtractPointFrom*`, `pointsLabel`, `isStarPointDecider`). Takes `PadelState` in, returns `PadelState` out.
-- `Match` / `MatchSummary` / `AggregateStats` — domain models for completed matches
-  (`Match.strokesPerSet: List<Int>?` — per-set stroke count, nullable/backward-compatible)
-- `MatchCodec` — JSON serialization via kotlinx.serialization for watch↔phone sync
-- `StrokeDetector` — pure stroke detection by acceleration peaks (threshold + debounce),
-  testable without Android; `StrokeSensitivity.thresholdMs2()` maps High/Medium/Low → threshold
-- `StrokeStats` — pure interpretation of stroke data (phone side): `Match.strokeStats(category)`
-  derives PGG (strokes ÷ games) per set and total; `strokeAggregate(matches, category)` aggregates
-  history; `PadelCategory.verdict(pgg)` maps PGG → `StrokeVerdict` calibrated by category
-- `Enums` — `Decider`, `CourtColorOption`, `Winner`, `MatchOrigin` (`WEAR`/`MOBILE`/`MANUAL`), `ScoringMode`,
-  `StrokeSensitivity`, `PadelCategory`, `StrokeVerdict`
+Scoring logic (`PadelState`/`PadelLogic`), domain models (`Match`/`MatchSummary`/`AggregateStats`),
+serialization (`MatchCodec`), stroke detection (`StrokeDetector`), and stroke stats (`StrokeStats`).
+- **Gotcha:** `Match.strokesPerSet: List<Int>?` — nullable for backward compatibility
+- **Gotcha:** `StrokeSensitivity.thresholdMs2()` maps High/Medium/Low → threshold (non-obvious API)
 
 ### `:wear` (Wear OS, API 30-35, Compose for Wear)
-- Single-activity (`MainActivity.kt`) with screens (COUNTER, SETTINGS, NEW_MATCH, TUTORIAL, WALKTHROUGH, MATCH_FINISHED, STROKE_TEST) navigated via `mutableStateOf` + `AnimatedVisibility`. No ViewModel, no DI.
-- `PadelDataStore` — `PadelRepository` wrapping DataStore Preferences, exposes `PadelState` as `Flow`
-- `sync/` — `WearSyncQueue` + `WearSyncSender` enqueue completed matches and push to phone via Wearable DataClient
-- `StrokeCounterService` — foreground service (`foregroundServiceType="health"`) that samples the accelerometer during a match and feeds `StrokeDetector` (`:shared`); strokes accumulate per set in `StrokeCounter` (in-memory singleton, DataStore backup per game). Lifecycle tied to match start/finish; injected into `Match.strokesPerSet` on finish. Test mode (`StrokeTestScreen`) registers the sensor directly from the composable (no service)
-- Gestures: tap to score, double-tap to subtract, swipe-left for settings
-- `ScreenMetrics` adapts layout for round vs square screens (constraint: `fw² + fh² ≤ 1.0`)
+Single-activity with screens navigated via `mutableStateOf` + `AnimatedVisibility`. **No ViewModel, no DI.**
+- **Design:** `StrokeCounterService` is a foreground service (`foregroundServiceType="health"`); strokes accumulate in `StrokeCounter` (in-memory singleton, DataStore backup per game)
+- **Constraint:** `ScreenMetrics` adapts layout for round vs square — `fw² + fh² ≤ 1.0`
 
 ### `:mobile` (Phone app, API 26+, Material3 Compose)
-- Uses ViewModels + `ViewModelFactory` for DI (manual, no framework)
-- Navigation Compose with bottom nav: Scoring, History, Stats, Settings
-- `data/db/` — Room database (`PadelDatabase`, `MatchDao`, `MatchEntity`) for match history persistence.
-  `MatchEntity.strokesPerSetJson` (nullable) persists the per-set stroke count from the watch (migration 3→4)
-- `data/MobilePreferences` — DataStore for in-progress match state and user preferences (incl. `category`)
-- `data/MobileRepository` — single repository coordinating Room + DataStore
-- `sync/SyncBridgeListener` — receives match data from watch via Wearable DataClient
-- `sync/SyncBridgeClient` — checks watch connectivity
-- **Manual match entry:** a FAB in History opens `ManualMatchSheet` (bottom sheet) to load an
-  already-played match. `ManualMatchDraft` (`ui/history/`) holds the pure logic — sets left at 0-0
-  are discarded, and `winner`/`tieBreakUsed` are derived from the score. Saved with
-  `origin = MatchOrigin.MANUAL`, `startedAt == finishedAt` (local noon of the chosen date), so the
-  detail screen hides "Duración" and "Modo" for these matches. They do count toward Stats
-- **Share result:** a share action in the match detail builds the WhatsApp-formatted text in
-  `MatchShareText.kt` (pure, testable) and fires a generic `ACTION_SEND` chooser (`ShareMatch.kt`).
-  The stroke block is included only when the watch sent data
-- **History backup:** Settings → Tools exports/imports the whole history as versioned JSON
-  (`MatchArchive` in `:shared`) through the Storage Access Framework — no storage permissions.
-  Import **merges** by id (`INSERT OR IGNORE`), so re-importing never duplicates or overwrites.
-  `MatchArchive` needs `encodeDefaults = true`: without it kotlinx omits `version`, which would
-  make the compatibility check useless once `ARCHIVE_VERSION` moves past 1
-- **Stroke stats:** phone interprets the watch's raw data via `StrokeStats` (`:shared`). PGG + verdict
-  are derived at read-time (not persisted) using the `PadelCategory` chosen in Settings, and shown in a
-  "GOLPES" section of the match detail (per set + total) and aggregated in the Stats screen
+ViewModels + `ViewModelFactory` for DI (**manual, no framework**). Navigation Compose with bottom nav.
+Room database for history, DataStore for preferences, Wearable DataClient for watch sync.
+- **Gotcha:** Room migration 3→4 added `strokesPerSetJson` (nullable)
+- **Gotcha:** `MatchArchive` needs `encodeDefaults = true` — without it kotlinx omits `version`,
+  breaking the compatibility check once `ARCHIVE_VERSION` moves past 1
+- **Design:** PGG + verdict are derived at read-time (never persisted) — switching `PadelCategory`
+  re-diagnoses every past match
+- **Design:** Manual matches use `origin = MANUAL`, `startedAt == finishedAt` (local noon) —
+  detail screen hides "Duración" and "Modo" for these
+- **Design:** the rating prompt is **score-based, not count-based**. `ReviewPolicy` (`:shared`, pure)
+  decides *if*; `NavGraph` decides *when* — stats or match detail after a delay, never cold start.
+  Points come from `MobileRepository.insertMatch` (weighted by `MatchOrigin`), sharing a match and
+  visiting stats; importing a backup never scores. The modal deep-links to the Play Store listing and
+  **not** to the in-app review API, which forbids asking the user anything before its card
 
 ### Data flow: Watch → Phone sync
 Watch finishes match → `WearSyncQueue.enqueue()` → `WearSyncSender.trySendPending()` sends via `DataClient` → Phone's `SyncBridgeListener` receives → inserts into Room via `MobileRepository`. The payload carries `Match.strokesPerSet` (per-set stroke count, `null` when the feature is off or no sensor); the phone **persists that raw data** (`strokesPerSetJson`) and derives metrics (PGG, per-category verdict) at read-time via `StrokeStats` — the verdict is never persisted, so switching category re-diagnoses every past match.

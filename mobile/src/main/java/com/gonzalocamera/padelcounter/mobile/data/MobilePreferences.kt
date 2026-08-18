@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.gonzalocamera.padelcounter.shared.*
@@ -59,6 +60,14 @@ class MobilePreferences(private val context: Context) {
         val SETS_HISTORY = stringPreferencesKey("cs_sets_history")
         val HAS_ACTIVE_MATCH = booleanPreferencesKey("cs_has_active_match")
         val MATCH_STARTED_AT = stringPreferencesKey("cs_match_started_at")
+
+        val REVIEW_STATUS = stringPreferencesKey("review_status")
+        val REVIEW_SCORE = intPreferencesKey("review_score")
+        val REVIEW_FIRST_SEEN = longPreferencesKey("review_first_seen_at")
+        val REVIEW_LAST_PROMPT = longPreferencesKey("review_last_prompt_at")
+        val REVIEW_SCORE_AT_PROMPT = intPreferencesKey("review_score_at_last_prompt")
+        val REVIEW_PROMPT_COUNT = intPreferencesKey("review_prompt_count")
+        val REVIEW_STATS_DAY = longPreferencesKey("review_last_stats_day")
     }
 
     val userPreferences: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
@@ -169,6 +178,68 @@ class MobilePreferences(private val context: Context) {
             prefs[Keys.HAS_ACTIVE_MATCH] = false
             prefs.remove(Keys.MATCH_STARTED_AT)
             prefs.remove(Keys.SETS_HISTORY)
+        }
+    }
+
+    // --- Pedido de calificación ---
+
+    val reviewPromptState: Flow<ReviewPromptState> = context.dataStore.data.map { prefs ->
+        ReviewPromptState(
+            status = runCatching {
+                ReviewPromptStatus.valueOf(prefs[Keys.REVIEW_STATUS] ?: "")
+            }.getOrDefault(ReviewPromptStatus.NEVER_ASKED),
+            score = prefs[Keys.REVIEW_SCORE] ?: 0,
+            firstSeenAt = prefs[Keys.REVIEW_FIRST_SEEN] ?: 0L,
+            lastPromptAt = prefs[Keys.REVIEW_LAST_PROMPT] ?: 0L,
+            scoreAtLastPrompt = prefs[Keys.REVIEW_SCORE_AT_PROMPT] ?: 0,
+            promptCount = prefs[Keys.REVIEW_PROMPT_COUNT] ?: 0,
+            lastStatsSignalDay = prefs[Keys.REVIEW_STATS_DAY] ?: 0L,
+        )
+    }
+
+    /**
+     * Fija el ancla temporal la primera vez y siembra el puntaje según el historial que
+     * ya había. Idempotente: solo escribe si `REVIEW_FIRST_SEEN` no existe todavía.
+     */
+    suspend fun seedReviewPrompt(now: Long, matchCount: Int) {
+        context.dataStore.edit { prefs ->
+            if (prefs[Keys.REVIEW_FIRST_SEEN] != null) return@edit
+            prefs[Keys.REVIEW_FIRST_SEEN] = now
+            prefs[Keys.REVIEW_SCORE] = ReviewPolicy.seedScore(matchCount)
+        }
+    }
+
+    /**
+     * Suma los puntos de una señal de uso. No acumula si el pedido ya está cerrado
+     * (calificó o dijo que no), y topea STATS_VIEWED a una vez por día para que dejar
+     * la app abierta en Estadísticas no infle el puntaje.
+     */
+    suspend fun addReviewSignal(signal: ReviewSignal, now: Long) {
+        context.dataStore.edit { prefs ->
+            val status = runCatching {
+                ReviewPromptStatus.valueOf(prefs[Keys.REVIEW_STATUS] ?: "")
+            }.getOrDefault(ReviewPromptStatus.NEVER_ASKED)
+            if (status == ReviewPromptStatus.RATED || status == ReviewPromptStatus.DISMISSED) {
+                return@edit
+            }
+            if (signal == ReviewSignal.STATS_VIEWED) {
+                val today = ReviewPolicy.dayOf(now)
+                if ((prefs[Keys.REVIEW_STATS_DAY] ?: 0L) == today) return@edit
+                prefs[Keys.REVIEW_STATS_DAY] = today
+            }
+            prefs[Keys.REVIEW_SCORE] = (prefs[Keys.REVIEW_SCORE] ?: 0) + signal.points
+        }
+    }
+
+    suspend fun saveReviewPromptState(state: ReviewPromptState) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.REVIEW_STATUS] = state.status.name
+            prefs[Keys.REVIEW_SCORE] = state.score
+            prefs[Keys.REVIEW_FIRST_SEEN] = state.firstSeenAt
+            prefs[Keys.REVIEW_LAST_PROMPT] = state.lastPromptAt
+            prefs[Keys.REVIEW_SCORE_AT_PROMPT] = state.scoreAtLastPrompt
+            prefs[Keys.REVIEW_PROMPT_COUNT] = state.promptCount
+            prefs[Keys.REVIEW_STATS_DAY] = state.lastStatsSignalDay
         }
     }
 

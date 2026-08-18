@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.gonzalocamera.padelcounter.mobile.data.UserPreferences
 import com.gonzalocamera.padelcounter.mobile.ui.components.CourtColorThumb
 import com.gonzalocamera.padelcounter.mobile.ui.components.SectionHeader
+import com.gonzalocamera.padelcounter.mobile.ui.rating.openPlayStoreListing
 import com.gonzalocamera.padelcounter.shared.CourtColorOption
 import com.gonzalocamera.padelcounter.shared.PadelCategory
 import com.gonzalocamera.padelcounter.shared.ThemeMode
@@ -151,6 +153,11 @@ fun SettingsScreen(
         // filtrar solo por application/json ocultaría backups válidos.
         onImportHistory = { importLauncher.launch(arrayOf(BACKUP_MIME, "*/*")) },
         onContactUs = { contactByEmail(context) },
+        onRateApp = {
+            openPlayStoreListing(context)
+            // Quien califica desde acá no debería ver después el modal proactivo.
+            viewModel.markRated()
+        },
     )
 }
 
@@ -166,6 +173,7 @@ internal fun SettingsContent(
     onExportHistory: () -> Unit = {},
     onImportHistory: () -> Unit = {},
     onContactUs: () -> Unit = {},
+    onRateApp: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -286,6 +294,29 @@ internal fun SettingsContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             )
+        }
+
+        Column {
+            SectionHeader("APOYÁ LA APP")
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Una calificación en Google Play ayuda a que más jugadores la encuentren.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onRateApp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.StarOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Calificar la app")
+            }
         }
 
         Column {

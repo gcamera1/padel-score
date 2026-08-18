@@ -49,6 +49,7 @@ import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelPalette
 import com.gonzalocamera.padelcounter.mobile.ui.theme.PadelTheme
 import com.gonzalocamera.padelcounter.shared.Match
 import com.gonzalocamera.padelcounter.shared.MatchSummary
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -57,12 +58,17 @@ import java.util.Locale
 
 private val monthFormat = SimpleDateFormat("MMM yyyy", Locale("es"))
 
+/** Cuatro segundos en el detalle = se quedó leyendo, no rebotó. */
+private const val DETAIL_MOMENT_DELAY_MS = 4_000L
+
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun HistoryScreen(
     viewModel: HistoryViewModel,
     @Suppress("UNUSED_PARAMETER") onMatchClick: (String) -> Unit = {},
     onPlayMatch: () -> Unit,
+    onShared: () -> Unit = {},
+    onMatchDetailViewed: () -> Unit = {},
 ) {
     val matches by viewModel.matches.collectAsState()
     val aggregate by viewModel.aggregateLite.collectAsState()
@@ -71,6 +77,15 @@ fun HistoryScreen(
     var selectedMatchId by remember { mutableStateOf<String?>(null) }
     var showManualSheet by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // El detalle es un pane del ListDetailPaneScaffold **dentro** de la ruta `history`, no
+    // una ruta de navegación propia: por eso el momento de valor se detecta acá, sobre
+    // `selectedMatchId`, y no por ruta en el NavGraph. Cerrar el detalle cancela la espera.
+    LaunchedEffect(selectedMatchId) {
+        if (selectedMatchId == null) return@LaunchedEffect
+        delay(DETAIL_MOMENT_DELAY_MS)
+        onMatchDetailViewed()
+    }
 
     BackHandler(enabled = navigator.canNavigateBack()) {
         scope.launch {
@@ -138,6 +153,7 @@ fun HistoryScreen(
                                 selectedMatchId = null
                             }
                         },
+                        onShared = onShared,
                     )
                 } else {
                     EmptyDetailHint(
@@ -208,6 +224,7 @@ private fun InlineMatchDetailPane(
     matchId: String,
     viewModel: HistoryViewModel,
     onBack: () -> Unit,
+    onShared: () -> Unit = {},
 ) {
     var match by remember { mutableStateOf<Match?>(null) }
     val category by viewModel.category.collectAsState()
@@ -221,6 +238,7 @@ private fun InlineMatchDetailPane(
                 onBack()
             },
             category = category,
+            onShared = onShared,
         )
     }
 }

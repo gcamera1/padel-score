@@ -8,6 +8,7 @@ import com.gonzalocamera.padelcounter.shared.ArchiveDecodeException
 import com.gonzalocamera.padelcounter.shared.CourtColorOption
 import com.gonzalocamera.padelcounter.shared.MatchArchive
 import com.gonzalocamera.padelcounter.shared.PadelCategory
+import com.gonzalocamera.padelcounter.shared.ReviewPolicy
 import com.gonzalocamera.padelcounter.shared.ThemeMode
 import com.gonzalocamera.padelcounter.shared.decodeArchive
 import com.gonzalocamera.padelcounter.shared.encodeArchive
@@ -43,6 +44,19 @@ class SettingsViewModel(private val repository: MatchRepository) : ViewModel() {
 
     fun setCategory(category: PadelCategory) {
         updatePrefs { it.copy(category = category) }
+    }
+
+    /**
+     * El usuario fue a calificar desde Ajustes: cierra el pedido proactivo para que el
+     * modal no lo vuelva a interrumpir.
+     */
+    fun markRated() {
+        viewModelScope.launch {
+            val state = repository.reviewPromptState.first()
+            repository.saveReviewPromptState(
+                ReviewPolicy.rated(state, System.currentTimeMillis()),
+            )
+        }
     }
 
     /**

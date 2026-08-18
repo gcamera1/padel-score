@@ -68,6 +68,7 @@ fun MatchDetailScreen(
     matchId: String,
     viewModel: HistoryViewModel,
     onBack: () -> Unit,
+    onShared: () -> Unit = {},
 ) {
     var match by remember { mutableStateOf<Match?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -87,7 +88,10 @@ fun MatchDetailScreen(
                 onBack = onBack,
                 actions = {
                     match?.let { loaded ->
-                        IconButton(onClick = { shareMatch(context, loaded, category) }) {
+                        IconButton(onClick = {
+                            shareMatch(context, loaded, category)
+                            onShared()
+                        }) {
                             Icon(
                                 Icons.Default.Share,
                                 contentDescription = "Compartir resultado",
@@ -394,6 +398,7 @@ internal fun InlineMatchDetailScaffold(
     onBack: () -> Unit,
     onDelete: () -> Unit,
     category: PadelCategory = PadelCategory.SEXTA,
+    onShared: () -> Unit = {},
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -403,7 +408,10 @@ internal fun InlineMatchDetailScaffold(
                 title = "Detalle",
                 onBack = onBack,
                 actions = {
-                    IconButton(onClick = { shareMatch(context, match, category) }) {
+                    IconButton(onClick = {
+                        shareMatch(context, match, category)
+                        onShared()
+                    }) {
                         Icon(
                             Icons.Default.Share,
                             contentDescription = "Compartir resultado",

@@ -30,8 +30,18 @@ class MobileRepository(
 
     override val userPreferences: Flow<UserPreferences> = preferences.userPreferences
 
+    override val reviewPromptState: Flow<ReviewPromptState> = preferences.reviewPromptState
+
     override suspend fun insertMatch(match: Match) {
-        matchDao.insertIfAbsent(match.toEntity())
+        val inserted = matchDao.insertIfAbsent(match.toEntity()) != -1L
+        // El reloj puede reenviar el mismo partido, así que solo el insert real puntúa:
+        // sincronizar dos veces no debe empujar el pedido de calificación.
+        if (inserted) {
+            preferences.addReviewSignal(
+                ReviewPolicy.signalFor(match.origin),
+                System.currentTimeMillis(),
+            )
+        }
     }
 
     // insertIfAbsent es INSERT OR IGNORE: devuelve -1 cuando el id ya existía, así que
@@ -57,5 +67,20 @@ class MobileRepository(
 
     override suspend fun savePreferences(prefs: UserPreferences) {
         preferences.savePreferences(prefs)
+    }
+
+    // Importar un backup no puntúa: restaurar partidos viejos no es uso de la app, así
+    // que `insertMatches` no pasa por `addReviewSignal`.
+
+    override suspend fun seedReviewPrompt(now: Long) {
+        preferences.seedReviewPrompt(now, matchDao.countAll())
+    }
+
+    override suspend fun recordReviewSignal(signal: ReviewSignal, now: Long) {
+        preferences.addReviewSignal(signal, now)
+    }
+
+    override suspend fun saveReviewPromptState(state: ReviewPromptState) {
+        preferences.saveReviewPromptState(state)
     }
 }

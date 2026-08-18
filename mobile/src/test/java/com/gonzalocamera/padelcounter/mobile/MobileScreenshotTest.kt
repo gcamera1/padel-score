@@ -1,6 +1,8 @@
 package com.gonzalocamera.padelcounter.mobile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.gonzalocamera.padelcounter.mobile.data.UserPreferences
@@ -8,6 +10,7 @@ import com.gonzalocamera.padelcounter.mobile.ui.components.MatchCard
 import com.gonzalocamera.padelcounter.mobile.ui.history.HistoryScreenContent
 import com.gonzalocamera.padelcounter.mobile.ui.history.ManualMatchSheetContent
 import com.gonzalocamera.padelcounter.mobile.ui.history.MatchDetailContent
+import com.gonzalocamera.padelcounter.mobile.ui.rating.RatingPromptContent
 import com.gonzalocamera.padelcounter.mobile.ui.scoring.CourtScreen
 import com.gonzalocamera.padelcounter.mobile.ui.scoring.MatchEndSheet
 import com.gonzalocamera.padelcounter.mobile.ui.scoring.NewMatchSheetContent
@@ -416,4 +419,20 @@ class MobileScreenshot_Settings {
             }
         }
     }
+
+    /** El contenido del modal, no el Dialog: Paparazzi no captura ventanas de diálogo. */
+    @Test fun ratingPrompt() {
+        paparazzi.snapshot {
+            PadelMobileTheme {
+                androidx.compose.foundation.layout.Box(
+                    modifier = androidx.compose.ui.Modifier
+                        .background(com.gonzalocamera.padelcounter.mobile.ui.theme.PadelPalette.BackgroundDeep)
+                        .padding(vertical = 32.dp)
+                ) {
+                    RatingPromptContent()
+                }
+            }
+        }
+    }
+
 }

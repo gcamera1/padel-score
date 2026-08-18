@@ -19,4 +19,7 @@ interface MatchDao {
 
     @Query("SELECT * FROM matches WHERE id = :matchId")
     suspend fun getById(matchId: String): MatchEntity?
+
+    @Query("SELECT COUNT(*) FROM matches")
+    suspend fun countAll(): Int
 }

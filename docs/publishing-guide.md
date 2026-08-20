@@ -12,8 +12,12 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 |
 | wear | 350110103 | 1.1.0 | 35 | ✅ Publicada (11/08/2026, Envío 13) |
 | mobile | 360110100 | 1.1.0 | **36** | ✅ Publicada (12/08/2026, Envío 14) |
-| wear | **350110203** | 1.1.0 | 35 | **En revisión** (Envío 15, 12/08/2026) |
-| mobile | **360120000** | **1.2.0** | 36 | **Pendiente de subir** (Envío 16) — invitación a calificar |
+| wear | 350110203 | 1.1.0 | 35 | ✅ Publicada (Envío 15) |
+| mobile | **360120000** | **1.2.0** | 36 | **Borrador subido, sin enviar** (Envío 16) — invitación a calificar |
+
+Cambios de ficha (nombre a "Simple Padel Score: Marcador", descripción y capturas, es-419):
+**en revisión** desde el 20/08/2026, en un envío aparte del binario. El Envío 16 espera a que
+esos se aprueben antes de mandarse.
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos

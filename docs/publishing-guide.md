@@ -28,10 +28,22 @@ tiene [requisito propio](https://support.google.com/googleplay/android-developer
 y se queda en **API 35**. `:mobile` está en `targetSdk 36` desde el Envío 14 y `:wear` en 35
 desde el 13, así que **no hace falta compilar ni publicar nada** por esa fecha.
 
-Si el aviso de la consola sigue visible, no es el artefacto de producción: mirá en *Ver detalles*
-qué bundle lo dispara. El candidato conocido es el **`vc5`, targetSdk 34, del canal de prueba
-cerrada** (31/03/2026) — el canal está pausado, pero el bundle sigue asociado. Es lo que ya
-figura en `pendientes.md` §1 ("Limpiar el bundle vc5 del canal cerrado").
+El aviso que Play volvió a notificar el **27/08/2026** lo dispara un solo bundle, identificado
+con *Ver detalles → Ver app bundles* el 29/08:
+
+| Bundle | Versión | SDK objetivo | Primera publicación |
+|--------|---------|--------------|---------------------|
+| `350100000` (1.0.0) | Prueba cerrada — **Alpha** | 35 | 6 jul 2026 |
+
+Es el **`:mobile` 1.0.0 viejo**, que quedó activo en el canal de prueba cerrada de teléfono
+después de ser reemplazado en producción. No es el `vc5` de Wear OS (ése está en 34 y el detalle
+dice que el nivel incumplidor más alto es 35), y **no es ningún artefacto de producción**.
+
+Se resuelve **sacándolo de circulación en el canal Alpha**, sin compilar nada. Ojo con dónde se
+aplica: pausar un canal de prueba **cerrada** queda pendiente y viaja en un envío a revisión (a
+diferencia de la prueba interna, que se aplica de inmediato) — precedente en el Envío 13, que
+llevó exactamente ese cambio. La alternativa "Detener lanzamiento" hace caer a los testers al
+bundle anterior, todavía más viejo, así que no sirve.
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos

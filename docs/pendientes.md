@@ -376,9 +376,11 @@ pide API 36 (Android 16) para el teléfono, pero
 [Wear OS tiene requisito propio](https://support.google.com/googleplay/android-developer/answer/11926878)
 y se queda en **API 35**: `:mobile` está en 36 desde el Envío 14 y `:wear` en 35 desde el 13.
 
-El aviso que volvió a notificar Play el **27/08** no puede ser el bundle de producción. El
-candidato es el `vc5` de abajo; conviene abrir *Ver detalles* y confirmar qué artefacto lista
-antes de tocar nada.
+El aviso que volvió a notificar Play el **27/08** no es el bundle de producción. *Ver app
+bundles* (29/08) lista **uno solo**: `350100000` (1.0.0), SDK objetivo **35**, canal **Prueba
+cerrada — Alpha**, primera publicación 6 jul 2026. Es el `:mobile` 1.0.0 viejo, que quedó activo
+en ese canal al ser reemplazado en producción. Tampoco es el `vc5` de más abajo: ése está en 34
+y el detalle dice que el nivel incumplidor **más alto** es 35.
 
 
 Hecho en el branch `chore/target-sdk-bump` (2 de agosto de 2026), **sin publicar todavía**:
@@ -419,7 +421,19 @@ manifest no fija orientación (Android 16 la ignora en pantallas grandes).
 **Falta probar en hardware real** el edge-to-edge de mobile: los screenshot tests de Paparazzi
 no renderizan la Activity, así que no cubren las barras del sistema.
 
-### Limpiar el bundle vc5 del canal cerrado
+### Sacar de circulación el `350100000` del canal Alpha — lo único pendiente
+
+Es lo que dispara el aviso hoy. Sin código: se pausa el canal de **prueba cerrada (Alpha)** del
+teléfono. Ese pausado **queda pendiente y viaja en un envío a revisión** —a diferencia del de
+prueba interna, que se aplica de inmediato— tal como pasó en el Envío 13. "Detener lanzamiento"
+no sirve: hace caer a los testers al bundle anterior, todavía más viejo.
+
+No hay nada más esperando salir, así que el envío iría solo. Si el plazo se venciera antes de
+que se apruebe, lo único que se bloquea es **publicar actualizaciones nuevas**: la app en
+producción no se cae, y el botón *Solicitar más tiempo* de la pantalla del problema extiende
+hasta el 1 de noviembre de 2026.
+
+### Limpiar el bundle vc5 del canal cerrado (Wear OS)
 
 El aviso de API de Wear OS lo dispara un bundle viejo: **versionCode 5, targetSdk 34,
 publicado el 31/03/2026 en el canal de prueba cerrada**, que quedó de un intento anterior de

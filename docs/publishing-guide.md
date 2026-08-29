@@ -47,12 +47,12 @@ bundle anterior, todavía más viejo, así que no sirve.
 Pausar un canal de prueba **cerrada** no se aplica solo: queda pendiente y viaja en un envío a
 revisión —a diferencia de la prueba interna, que es inmediata—, igual que en el Envío 13.
 **Enviado como Envío 18 el 29/08/2026 12:02, con un único ítem** (Prueba cerrada - Alpha →
-Estado del canal → Pausar canal), sin arrastrar Producción ni ficha.
+Estado del canal → Pausar canal), sin arrastrar Producción ni ficha. **Publicado el mismo día
+~12:29**, en menos de media hora.
 
-El aviso de la consola **sigue visible después de enviar**: Play lo recalcula cuando la revisión
-se aprueba, no al mandarla. Si el 31/08 llegara sin aprobación, lo único que se bloquea es
-publicar actualizaciones nuevas —la app en producción no se cae— y el botón *Solicitar más
-tiempo* de la pantalla del problema extiende hasta el 1 de noviembre de 2026.
+El aviso de la consola **no desaparece al enviar ni al aprobarse**: Play lo recalcula por su
+cuenta un rato después de que el cambio queda aplicado. Con el Envío 18 publicado no queda nada
+que hacer del lado del repo — solo confirmar en unos días que el aviso se fue.
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos

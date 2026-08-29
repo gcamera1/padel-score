@@ -13,11 +13,25 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | wear | 350110103 | 1.1.0 | 35 | ✅ Publicada (11/08/2026, Envío 13) |
 | mobile | 360110100 | 1.1.0 | **36** | ✅ Publicada (12/08/2026, Envío 14) |
 | wear | 350110203 | 1.1.0 | 35 | ✅ Publicada (Envío 15) |
-| mobile | **360120000** | **1.2.0** | 36 | **Borrador subido, sin enviar** (Envío 16) — invitación a calificar |
+| mobile | **360120000** | **1.2.0** | **36** | ✅ Publicada (27/08/2026, Envío 17) — invitación a calificar |
 
-Cambios de ficha (nombre a "Simple Padel Score: Marcador", descripción y capturas, es-419):
-**en revisión** desde el 20/08/2026, en un envío aparte del binario. El Envío 16 espera a que
-esos se aprueben antes de mandarse.
+Los cambios de ficha (nombre a "Simple Padel Score: Marcador", descripción y capturas, es-419)
+viajaron solos como **Envío 16** y quedaron **publicados el 20/08/2026**. Recién con eso
+aprobado se mandó el binario: el Envío 17 se envió el 27/08 a las 14:05 y Play lo publicó a las
+14:22, con **Iniciar lanzamiento completo**. Todo lo que hay en `main` está hoy en producción,
+teléfono y reloj.
+
+### Nivel de API de destino — al 29/08/2026 los dos artefactos cumplen
+
+El plazo del **31 de agosto de 2026** pide API 36 (Android 16) para el teléfono, pero Wear OS
+tiene [requisito propio](https://support.google.com/googleplay/android-developer/answer/11926878)
+y se queda en **API 35**. `:mobile` está en `targetSdk 36` desde el Envío 14 y `:wear` en 35
+desde el 13, así que **no hace falta compilar ni publicar nada** por esa fecha.
+
+Si el aviso de la consola sigue visible, no es el artefacto de producción: mirá en *Ver detalles*
+qué bundle lo dispara. El candidato conocido es el **`vc5`, targetSdk 34, del canal de prueba
+cerrada** (31/03/2026) — el canal está pausado, pero el bundle sigue asociado. Es lo que ya
+figura en `pendientes.md` §1 ("Limpiar el bundle vc5 del canal cerrado").
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos

@@ -1,6 +1,6 @@
 # Pendientes — Simple Padel Score
 
-Estado al **11 de agosto de 2026**.
+Estado al **29 de agosto de 2026**. Todo lo que hay en `main` está publicado en producción.
 
 ## 🎉 Wear OS 1.1.0 aprobada (11 ago 2026)
 
@@ -332,7 +332,9 @@ las pantallas con la fuente en Largest, no solo las dos señaladas.
 | wear | 350110003 | 1.1.0 | 35 | Rechazada (Envío 12, 05/08/2026) — WO-V1 → "Sustituida por otra versión" |
 | wear | 350110103 | 1.1.0 | 35 | ✅ Publicada (11/08/2026 04:00) — Envío 13, 100% |
 | mobile | 360110100 | 1.1.0 | **36** | ✅ **Publicada** (12/08/2026) — Envío 14, 100% |
-| wear | **350110203** | **1.1.0** | **35** | **En revisión** — Envío 15, 12/08/2026 17:49, 100% |
+| wear | 350110203 | 1.1.0 | 35 | ✅ Publicada — Envío 15 |
+| — (ficha) | — | — | — | ✅ Publicada (20/08/2026) — Envío 16: nombre, descripción y capturas |
+| mobile | **360120000** | **1.2.0** | **36** | ✅ **Publicada** (27/08/2026 14:22) — Envío 17, 100% |
 
 Con *Publicación gestionada desactivada*, el bundle aprobado se publica automáticamente al 100%
 en los 177 países en cuanto Google lo apruebe (plazo estimado: 7 días).
@@ -344,8 +346,10 @@ en la pantalla de revisión. 75 wearables compatibles. Única advertencia: la de
 depuración nativos, que es opcional (sección 4).
 
 El **aviso de nivel de API de Wear OS no reapareció**: el `targetSdk 35` quedó aceptado. El del
-teléfono sí sigue, con fecha límite **31 de agosto** (la notificación de Play dice textualmente
-*"Haz algo no más tarde del 31 ago"*; antes acá figuraba 30, un día de margen que no existía).
+teléfono seguía visible con fecha límite **31 de agosto** (la notificación de Play dice
+textualmente *"Haz algo no más tarde del 31 ago"*; antes acá figuraba 30, un día de margen que
+no existía) y **volvió a aparecer el 27/08**, ya con los dos artefactos en regla — ver la nota
+de abajo.
 
 El Envío 12 (rechazado) había llevado los mismos dos cambios con el bundle `350110003`.
 
@@ -365,7 +369,17 @@ muestra "Actualización en revisión".
 
 ---
 
-## 1. Fecha límite dura: 31 de agosto de 2026 — ✅ RESUELTO en código
+## 1. Fecha límite dura: 31 de agosto de 2026 — ✅ RESUELTO Y PUBLICADO
+
+**Al 29/08/2026 los dos artefactos de producción cumplen y no hay nada que compilar.** El plazo
+pide API 36 (Android 16) para el teléfono, pero
+[Wear OS tiene requisito propio](https://support.google.com/googleplay/android-developer/answer/11926878)
+y se queda en **API 35**: `:mobile` está en 36 desde el Envío 14 y `:wear` en 35 desde el 13.
+
+El aviso que volvió a notificar Play el **27/08** no puede ser el bundle de producción. El
+candidato es el `vc5` de abajo; conviene abrir *Ver detalles* y confirmar qué artefacto lista
+antes de tocar nada.
+
 
 Hecho en el branch `chore/target-sdk-bump` (2 de agosto de 2026), **sin publicar todavía**:
 
@@ -849,7 +863,7 @@ Antes de subirla:
 - Revisar el checklist de `publishing-guide.md` §9
 - Se sube al track de **teléfono** (el selector por defecto), no al de Wear OS
 
-### Release 3 — Wear OS: el partido duplicado y su duración · ✅ ENVIADA (Envío 15, en revisión)
+### Release 3 — Wear OS: el partido duplicado y su duración · ✅ PUBLICADA (Envío 15)
 
 `wear 350110203`, compilado y archivado en
 **`release-artifacts/padel-wear-v1.1.0-vc350110203.aab`**
@@ -911,7 +925,18 @@ Dos cosas que el emulador no cubre, ninguna bloqueante:
 Antes de instalar en el reloj real, resetear el partido en curso (ver la nota de migración de la
 sección 4).
 
-### Release 4 — migración de toolchain
+### Release 4 — ficha nueva + `:mobile` 1.2.0 · ✅ PUBLICADA (Envíos 16 y 17)
+
+Fue en dos envíos a propósito, no en uno: agrupar un cambio de ficha con un binario hace que la
+revisión del texto retenga al AAB (regla anotada en `publishing-guide.md`).
+
+- **Envío 16 (20/08/2026)** — solo ficha: nombre a *Simple Padel Score: Marcador*, descripción y
+  capturas en es-419. Publicado.
+- **Envío 17 (27/08/2026 14:05 → publicado 14:22)** — `mobile 360120000` (1.2.0), lanzamiento
+  completo. Lleva la **invitación a calificar** basada en puntaje de uso (`ReviewPolicy` en
+  `:shared`, disparada desde `NavGraph`) y el selector de involucramiento de la calculadora.
+
+### Release 5 — migración de toolchain
 
 AGP / Kotlin 2.x / Compose BOM / Paparazzi 2.x, y recién ahí `compileSdk 36` en `:mobile`
 (sección 3). Va sola, sin mezclar con cambios funcionales, porque lo que rompe es la UI y los

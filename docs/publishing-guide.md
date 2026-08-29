@@ -39,11 +39,20 @@ Es el **`:mobile` 1.0.0 viejo**, que quedó activo en el canal de prueba cerrada
 después de ser reemplazado en producción. No es el `vc5` de Wear OS (ése está en 34 y el detalle
 dice que el nivel incumplidor más alto es 35), y **no es ningún artefacto de producción**.
 
-Se resuelve **sacándolo de circulación en el canal Alpha**, sin compilar nada. Ojo con dónde se
-aplica: pausar un canal de prueba **cerrada** queda pendiente y viaja en un envío a revisión (a
-diferencia de la prueba interna, que se aplica de inmediato) — precedente en el Envío 13, que
-llevó exactamente ese cambio. La alternativa "Detener lanzamiento" hace caer a los testers al
+Se resolvió **sacándolo de circulación en el canal Alpha**, sin compilar nada: *Probar y
+publicar → Prueba cerrada → Alpha → Gestionar canal → **Pausar canal*** (botón arriba a la
+derecha del "Resumen del canal"). La alternativa "Detener lanzamiento" hace caer a los testers al
 bundle anterior, todavía más viejo, así que no sirve.
+
+Pausar un canal de prueba **cerrada** no se aplica solo: queda pendiente y viaja en un envío a
+revisión —a diferencia de la prueba interna, que es inmediata—, igual que en el Envío 13.
+**Enviado como Envío 18 el 29/08/2026 12:02, con un único ítem** (Prueba cerrada - Alpha →
+Estado del canal → Pausar canal), sin arrastrar Producción ni ficha.
+
+El aviso de la consola **sigue visible después de enviar**: Play lo recalcula cuando la revisión
+se aprueba, no al mandarla. Si el 31/08 llegara sin aprobación, lo único que se bloquea es
+publicar actualizaciones nuevas —la app en producción no se cae— y el botón *Solicitar más
+tiempo* de la pantalla del problema extiende hasta el 1 de noviembre de 2026.
 
 El requisito de **12 testers / 14 días** ya fue cumplido con la app de teléfono. No se
 repite al agregar el reloj: la habilitación de producción es a nivel de app, y como ambos

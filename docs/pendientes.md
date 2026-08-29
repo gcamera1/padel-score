@@ -421,17 +421,20 @@ manifest no fija orientación (Android 16 la ignora en pantallas grandes).
 **Falta probar en hardware real** el edge-to-edge de mobile: los screenshot tests de Paparazzi
 no renderizan la Activity, así que no cubren las barras del sistema.
 
-### Sacar de circulación el `350100000` del canal Alpha — lo único pendiente
+### Sacar de circulación el `350100000` del canal Alpha — ✅ ENVIADO (Envío 18, en revisión)
 
-Es lo que dispara el aviso hoy. Sin código: se pausa el canal de **prueba cerrada (Alpha)** del
-teléfono. Ese pausado **queda pendiente y viaja en un envío a revisión** —a diferencia del de
-prueba interna, que se aplica de inmediato— tal como pasó en el Envío 13. "Detener lanzamiento"
-no sirve: hace caer a los testers al bundle anterior, todavía más viejo.
+Era lo que disparaba el aviso. Sin código: se pausó el canal de **prueba cerrada (Alpha)** del
+teléfono, desde *Gestionar canal → Pausar canal*. "Detener lanzamiento" no servía: hace caer a
+los testers al bundle anterior, todavía más viejo.
 
-No hay nada más esperando salir, así que el envío iría solo. Si el plazo se venciera antes de
-que se apruebe, lo único que se bloquea es **publicar actualizaciones nuevas**: la app en
-producción no se cae, y el botón *Solicitar más tiempo* de la pantalla del problema extiende
-hasta el 1 de noviembre de 2026.
+**Enviado el 29/08/2026 12:02 como Envío 18**, con un único ítem (Prueba cerrada - Alpha →
+Estado del canal → Pausar canal) — verificado antes de mandarlo que no arrastraba Producción,
+ficha ni otros tracks.
+
+El aviso **sigue visible después de enviar**, como ya había pasado en el Envío 13: Play lo
+recalcula al aprobar, no al recibir. Si el plazo venciera antes, lo único que se bloquea es
+**publicar actualizaciones nuevas** —la app en producción no se cae— y el botón *Solicitar más
+tiempo* extiende hasta el 1 de noviembre de 2026.
 
 ### Limpiar el bundle vc5 del canal cerrado (Wear OS)
 

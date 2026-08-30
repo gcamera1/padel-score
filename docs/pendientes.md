@@ -488,6 +488,14 @@ De los tres que marcaba la consola, **los dos de edge-to-edge ya están resuelto
 
 ## 3. Migración de toolchain (AGP / Kotlin / Compose / Paparazzi)
 
+**Plan paso a paso completo en [`toolchain-migration-plan.md`](toolchain-migration-plan.md)**
+(30/08/2026): etapas con combos probados, dónde regrabar snapshots y por qué, verificación por
+etapa, riesgos y planes B. Lo de abajo queda como contexto histórico; datos nuevos que lo
+corrigen: existe **Paparazzi 1.3.5** (Kotlin 2.0.21) como escalón intermedio, Paparazzi 2.x
+sigue en alpha (última: 2.0.0-alpha05, compilada contra AGP 8.13.2 / Kotlin 2.3.0 / Java 21 —
+el daemon ya usa JDK 21), y el destino de AGP es la **serie 8.13.x, no 9.x** (AGP 9 integra
+Kotlin y es otra migración).
+
 **Decidido el 02/08/2026: se hace, pero como tanda propia y después de publicar 1.1.0.**
 No desbloquea nada — el requisito de Play es el `targetSdk` del manifest y ya está cumplido.
 El único beneficio concreto es poder poner `compileSdk 36` en `:mobile`, que es correctitud de
@@ -953,9 +961,9 @@ revisión del texto retenga al AAB (regla anotada en `publishing-guide.md`).
 
 ### Release 5 — migración de toolchain
 
-AGP / Kotlin 2.x / Compose BOM / Paparazzi 2.x, y recién ahí `compileSdk 36` en `:mobile`
-(sección 3). Va sola, sin mezclar con cambios funcionales, porque lo que rompe es la UI y los
-screenshot tests al mismo tiempo.
+AGP / Kotlin 2.x / Compose BOM / Paparazzi 2.x, y recién ahí `compileSdk 36`. Va sola, sin
+mezclar con cambios funcionales, porque lo que rompe es la UI y los screenshot tests al mismo
+tiempo. **Plan detallado: [`toolchain-migration-plan.md`](toolchain-migration-plan.md).**
 
 ### Sin fecha
 

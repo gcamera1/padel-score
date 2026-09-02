@@ -1636,10 +1636,12 @@ private fun SensitivitySelector(
     onChange: (StrokeSensitivity) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    // La leyenda desambigua el naming: "Alto" es alta sensibilidad (cuenta MÁS golpes),
+    // no "solo golpes altos" — confusión real de usuario. Corta y centrada por WO-V1.
     val choices = listOf(
-        StrokeSensitivity.HIGH to "Alto",
-        StrokeSensitivity.MEDIUM to "Medio",
-        StrokeSensitivity.LOW to "Bajo"
+        Triple(StrokeSensitivity.HIGH, "Alto", "Capta hasta los golpes suaves"),
+        Triple(StrokeSensitivity.MEDIUM, "Medio", "Equilibrado · recomendado"),
+        Triple(StrokeSensitivity.LOW, "Bajo", "Solo golpes fuertes")
     )
     val currentIdx = choices.indexOfFirst { it.first == current }.coerceAtLeast(0)
 
@@ -1679,25 +1681,37 @@ private fun SensitivitySelector(
             },
             modifier = Modifier.fillMaxWidth()
         ) { idx ->
-            val (_, lbl) = choices[idx]
-            Chip(
-                onClick = {
-                    val nextIdx = (currentIdx + 1) % choices.size
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onChange(choices[nextIdx].first)
-                },
-                label = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(lbl)
-                    }
-                },
-                colors = ChipDefaults.secondaryChipColors(),
-                modifier = Modifier.fillMaxWidth()
-            )
+            val (_, lbl, caption) = choices[idx]
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Chip(
+                    onClick = {
+                        val nextIdx = (currentIdx + 1) % choices.size
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onChange(choices[nextIdx].first)
+                    },
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(lbl)
+                        }
+                    },
+                    colors = ChipDefaults.secondaryChipColors(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    caption,
+                    style = MaterialTheme.typography.caption2,
+                    color = WearBrand.TextFaint,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
 
         Row(

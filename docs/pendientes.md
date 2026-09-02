@@ -1010,7 +1010,7 @@ revisión del texto retenga al AAB (regla anotada en `publishing-guide.md`).
   completo. Lleva la **invitación a calificar** basada en puntaje de uso (`ReviewPolicy` en
   `:shared`, disparada desde `NavGraph`) y el selector de involucramiento de la calculadora.
 
-### Release 5 — Wear OS 1.2.0: fix del crash en Android 16 · ✅ AAB LISTO (02/09/2026)
+### Release 5 — Wear OS 1.2.0: fix del crash en Android 16 · ✅ ENVIADA (Envío 19, en revisión)
 
 `wear 350120003`, versionName 1.2.0 (se alinea con el mobile ya publicado). Compilado y
 archivado en **`release-artifacts/padel-wear-v1.2.0-vc350120003.aab`**
@@ -1025,10 +1025,11 @@ Verificado sobre el AAB: versionCode `350120003`, versionName `1.2.0`, targetSdk
 minSdk `30`, firma idéntica al bundle publicado (`5A:39:B2:…:5E:BB`). Suites de `:shared` y
 `:wear` verdes.
 
-**Conviene publicarla pronto**: es un crash real en producción (19 eventos, Galaxy Watch7 /
-Android 16) y la base de Watch7+ con Wear OS 6 solo va a crecer. Al enviarla: track de
-**Wear OS**, lanzamiento completo, y sin mezclar con cambios de ficha en el mismo envío
-(checklist completo en `publishing-guide.md` §9).
+**Enviada el 02/09/2026 12:38 como Envío 19** — Producción (Wear OS), lanzamiento completo
+100%, un único ítem en el envío (sin ficha, teléfono ni canales de prueba). El `350110203`
+quedó en "No incluido". 81 wearables compatibles (subió de 75 — el catálogo de Wear OS 6
+creciendo), 0 dejan de serlo. Única advertencia: símbolos de depuración nativos (opcional).
+Con Publicación gestionada desactivada, se publica sola al aprobarse.
 
 ### Release 6 — migración de toolchain
 

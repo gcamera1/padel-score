@@ -1010,13 +1010,25 @@ revisión del texto retenga al AAB (regla anotada en `publishing-guide.md`).
   completo. Lleva la **invitación a calificar** basada en puntaje de uso (`ReviewPolicy` en
   `:shared`, disparada desde `NavGraph`) y el selector de involucramiento de la calculadora.
 
-### Release 5 — Wear OS 1.2.0: fix del crash en Android 16 · pendiente de publicar
+### Release 5 — Wear OS 1.2.0: fix del crash en Android 16 · ✅ AAB LISTO (02/09/2026)
 
-`wear 350120003`, versionName 1.2.0 (se alinea con el mobile ya publicado). Contenido: solo el
-fix del crash del foreground service (sección 4). **Conviene publicarla pronto**: es un crash
-real en producción (19 eventos, Galaxy Watch7 / Android 16) y la base de Watch7+ con Wear OS 6
-solo va a crecer. Checklist de `publishing-guide.md` §9; recordar la regla de no mezclar el
-binario con cambios de ficha en el mismo envío.
+`wear 350120003`, versionName 1.2.0 (se alinea con el mobile ya publicado). Compilado y
+archivado en **`release-artifacts/padel-wear-v1.2.0-vc350120003.aab`**
+(SHA-256 `a10688d02e0deb60389173057deb472edcef59ea08789a40630c38efce68aee4`).
+
+Contenido: el fix del crash del foreground service (sección 4, verificado con contrafactual
+en emulador API 36), la recalibración de sensibilidad (26/32/50 — el 32 validado en cancha
+pasa a ser el default) con leyendas nuevas en el selector (verificadas a 192dp · fuente 1.30),
+y el snapshot del reloj cuadrado como test.
+
+Verificado sobre el AAB: versionCode `350120003`, versionName `1.2.0`, targetSdk `35`,
+minSdk `30`, firma idéntica al bundle publicado (`5A:39:B2:…:5E:BB`). Suites de `:shared` y
+`:wear` verdes.
+
+**Conviene publicarla pronto**: es un crash real en producción (19 eventos, Galaxy Watch7 /
+Android 16) y la base de Watch7+ con Wear OS 6 solo va a crecer. Al enviarla: track de
+**Wear OS**, lanzamiento completo, y sin mezclar con cambios de ficha en el mismo envío
+(checklist completo en `publishing-guide.md` §9).
 
 ### Release 6 — migración de toolchain
 

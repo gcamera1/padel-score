@@ -50,6 +50,7 @@ class StrokeCounterService : Service(), SensorEventListener {
     @Volatile private var currentSetIdx: Int = 0
     @Volatile private var lastGamesPlayed: Int = -1
     @Volatile private var lastSensitivityName: String = ""
+    private var foregroundStarted = false
 
     override fun onCreate() {
         super.onCreate()
@@ -57,7 +58,21 @@ class StrokeCounterService : Service(), SensorEventListener {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
-        startAsForeground()
+        try {
+            startAsForeground()
+        } catch (e: IllegalStateException) {
+            // ForegroundServiceStartNotAllowedException (extiende IllegalStateException,
+            // así el catch no referencia una clase que no existe en API 30): el sistema
+            // creó el servicio con la app en background —donde Android 12+ prohíbe
+            // promoverlo a foreground— y en Wear OS con Android 16 eso es fatal en vez de
+            // tolerado (19 crashes en producción, todos Galaxy Watch7 / SDK 36). Sin
+            // foreground no hay muestreo con pantalla apagada: apagarse en silencio. El
+            // Activity re-arranca el servicio legítimamente en el próximo arranque de la
+            // app, y el respaldo por game acota los golpes perdidos.
+            stopSelf()
+            return
+        }
+        foregroundStarted = true
 
         // Restaurar el acumulado por si el proceso fue recreado a mitad de partido.
         scope.launch {
@@ -72,8 +87,9 @@ class StrokeCounterService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (accelerometer == null) {
-            // Sin sensor disponible: nada que muestrear (el partido sigue, conteo queda null).
+        if (!foregroundStarted || accelerometer == null) {
+            // Sin foreground (el catch de onCreate ya pidió stopSelf) o sin sensor
+            // disponible: nada que muestrear (el partido sigue, conteo queda null).
             stopSelf()
             return START_NOT_STICKY
         }
@@ -83,7 +99,12 @@ class StrokeCounterService : Service(), SensorEventListener {
             SAMPLING_PERIOD_US,
             MAX_REPORT_LATENCY_US
         )
-        return START_STICKY
+        // NOT_STICKY a propósito: si el sistema mata el proceso a mitad de partido, el
+        // restart automático del STICKY recrea el servicio en background, donde el
+        // startForeground de onCreate está prohibido (el crash de arriba). Ese restart no
+        // aporta nada: al volver a abrir la app, el Activity re-arranca el servicio desde
+        // foreground (LaunchedEffect de matchActive) y el conteo retoma desde el respaldo.
+        return START_NOT_STICKY
     }
 
     private fun onStateChanged(state: PadelState) {
@@ -120,9 +141,13 @@ class StrokeCounterService : Service(), SensorEventListener {
 
     override fun onDestroy() {
         sensorManager.unregisterListener(this)
-        // Persistir el acumulado final antes de morir.
-        val snapshot = StrokeCounter.snapshot()
-        scope.launch { repo.writeStrokeBackup(snapshot) }
+        // Persistir el acumulado final antes de morir — solo si el servicio llegó a correr:
+        // en el apagado silencioso de onCreate el singleton está vacío (proceso recreado) y
+        // escribirlo pisaría el respaldo bueno del proceso anterior.
+        if (foregroundStarted) {
+            val snapshot = StrokeCounter.snapshot()
+            scope.launch { repo.writeStrokeBackup(snapshot) }
+        }
         scope.cancel()
         super.onDestroy()
     }

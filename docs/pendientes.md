@@ -656,6 +656,33 @@ que sí tiene fecha límite. Va en la próxima release del reloj (ver el plan de
 app con un partido terminado en el estado dispara el duplicado. El 5/8 pasó dos veces con el
 partido del 4/8 (2-1, 4-6 6-4 7-5).
 
+### 🐛 Crash del foreground service en Android 16 — ✅ RESUELTO en código (02/09/2026, sin publicar)
+
+**19 crashes en producción**, visibles en Play Console → Android vitals → Fallos y errores ANR
+solo con el filtro en **"Todos los fallos"** (el default "percibidos por los usuarios" lo
+oculta). Todos con el mismo perfil: `ForegroundServiceStartNotAllowedException` en
+`StrokeCounterService.startAsForeground` (llamado desde `onCreate`), **únicamente Android 16
+(SDK 36)**, únicamente Galaxy Watch7 (fresh7bl/ul, projectx2ul/bl), siempre "en segundo plano".
+
+**Causa:** `onStartCommand` devolvía `START_STICKY`. Cuando el sistema mata el proceso a mitad
+de partido (presión de memoria, o el usuario desliza la app de recientes), Android recrea el
+servicio **en background**, donde promoverse a foreground está prohibido desde Android 12 — y
+en Wear OS con Android 16 esa excepción pasó de tolerada a **fatal**. El restart sticky no
+podía funcionar nunca en 16: solo crashear.
+
+**Fix (3 piezas en `StrokeCounterService`):** `START_NOT_STICKY` (elimina la recreación en
+background; al reabrir la app el Activity re-arranca el servicio desde foreground y el conteo
+retoma del respaldo por game); `try/catch IllegalStateException` alrededor de
+`startAsForeground()` con apagado silencioso (`ForegroundServiceStartNotAllowedException` la
+extiende, así el catch no referencia una clase inexistente en API 30); y guarda en `onDestroy`
+para no pisar el respaldo bueno con el snapshot vacío del proceso recreado.
+
+**Costo funcional:** si el sistema mata el proceso a mitad de partido, los golpes entre la
+muerte y la próxima apertura de la app se pierden (antes también: el crash no contaba nada).
+El marcador no se ve afectado — vive en DataStore.
+
+Sale como **wear 350120003 (1.2.0)** — ver plan de releases.
+
 ### Config de test del Galaxy Watch propio
 
 `CounterScreenshotTest.kt` cubre 225dp (`PIXEL_WATCH`) y 198dp (`GALAXY_WATCH_4_40MM`, el
@@ -959,7 +986,15 @@ revisión del texto retenga al AAB (regla anotada en `publishing-guide.md`).
   completo. Lleva la **invitación a calificar** basada en puntaje de uso (`ReviewPolicy` en
   `:shared`, disparada desde `NavGraph`) y el selector de involucramiento de la calculadora.
 
-### Release 5 — migración de toolchain
+### Release 5 — Wear OS 1.2.0: fix del crash en Android 16 · pendiente de publicar
+
+`wear 350120003`, versionName 1.2.0 (se alinea con el mobile ya publicado). Contenido: solo el
+fix del crash del foreground service (sección 4). **Conviene publicarla pronto**: es un crash
+real en producción (19 eventos, Galaxy Watch7 / Android 16) y la base de Watch7+ con Wear OS 6
+solo va a crecer. Checklist de `publishing-guide.md` §9; recordar la regla de no mezclar el
+binario con cambios de ficha en el mismo envío.
+
+### Release 6 — migración de toolchain
 
 AGP / Kotlin 2.x / Compose BOM / Paparazzi 2.x, y recién ahí `compileSdk 36`. Va sola, sin
 mezclar con cambios funcionales, porque lo que rompe es la UI y los screenshot tests al mismo

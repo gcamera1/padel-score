@@ -683,6 +683,30 @@ El marcador no se ve afectado — vive en DataStore.
 
 Sale como **wear 350120003 (1.2.0)** — ver plan de releases.
 
+#### ✅ Verificado en emulador (02/09/2026, Wear_OS_Small_Round · API 36 · 192dp)
+
+Contrafactual con el mismo método del partido duplicado — matar el proceso con la app en
+background (`run-as ... kill -9`, que simula al LMK) con un partido activo y el servicio en
+foreground:
+
+| Escenario | Resultado |
+|-----------|-----------|
+| **Código viejo** (STICKY), 3 kills | el proceso **resucita solo en background** en <15 s, las 3 veces — la precondición exacta del crash |
+| **Código nuevo** (NOT_STICKY), kill + 45 s | **no resucita** (0 crashes) — el único camino al crash ya no existe |
+| Código nuevo, reabrir la app | partido intacto y servicio de vuelta en foreground (`isForeground=true`, notif 4201) |
+
+**Limitación honesta:** la imagen genérica de AOSP no deniega el `startForeground` del restart
+sticky (conserva la excepción "venía siendo FGS") ni siquiera con `am make-uid-idle`, así que la
+excepción en sí no se puede disparar en emulador — la deniega la política más dura de Samsung en
+los Watch7 con Android 16. Lo que sí queda demostrado: el código viejo se recrea en background
+(3/3) y el nuevo no se recrea nunca; sin recreación en background, la excepción no tiene dónde
+ocurrir, en ningún OEM. El `try/catch` queda como segunda capa por si existe otro camino.
+
+**UI de sensibilidad** verificada en el mismo pase, con `font_scale 1.30` en 192dp (el peor
+caso WO-V1): las tres leyendas nuevas del selector ("Capta hasta los golpes suaves" /
+"Equilibrado · recomendado" / "Solo golpes fuertes") completas, centradas y sin cortes — la más
+larga wrappea a 2 líneas dentro del círculo. De paso: Ajustes muestra v1.2.0 del BuildConfig.
+
 ### Config de test del Galaxy Watch propio
 
 `CounterScreenshotTest.kt` cubre 225dp (`PIXEL_WATCH`) y 198dp (`GALAXY_WATCH_4_40MM`, el

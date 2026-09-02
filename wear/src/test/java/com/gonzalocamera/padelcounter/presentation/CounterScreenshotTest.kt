@@ -108,6 +108,19 @@ private val GALAXY_WATCH_4_40MM = DeviceConfig(
     screenRound = ScreenRound.ROUND
 )
 
+/**
+ * Reloj cuadrado — 192dp, NOTROUND. No hay hardware cuadrado en Wear OS 3+ (nuestro
+ * minSdk 30): los cuadrados reales (Sony SmartWatch 3, Oppo Watch) quedaron en Wear OS
+ * 1/2, y por eso Android Studio ya ni ofrece un AVD cuadrado para las imágenes nuevas.
+ * Pero `ScreenMetrics` mantiene la rama `!isRound` y la guía de calidad sigue listando
+ * pantallas cuadradas, así que este config es la única forma de verla renderizada.
+ */
+private val SQUARE_WATCH_192DP = DeviceConfig(
+    screenWidth = 768, screenHeight = 768,
+    density = Density.XXXHIGH,
+    screenRound = ScreenRound.NOTROUND
+)
+
 // --- Tests ------------------------------------------------------------------
 //
 // `maxPercentDifference` sube del 0.1% que trae Paparazzi por default porque el
@@ -157,6 +170,18 @@ class CounterScreenshot_LargestFont {
 class CounterScreenshot_GalaxyWatch40mm {
     @get:Rule val paparazzi = Paparazzi(
         deviceConfig = GALAXY_WATCH_4_40MM,
+        maxPercentDifference = CLOCK_TOLERANCE
+    )
+
+    @Test fun inGame() = paparazzi.snapshotCounter(IN_GAME_STATE)
+
+    @Test fun tieBreak() = paparazzi.snapshotCounter(TIE_BREAK_STATE)
+}
+
+/** Ejercita la rama `!isRound` de `ScreenMetrics`, invisible en todo AVD moderno. */
+class CounterScreenshot_SquareWatch {
+    @get:Rule val paparazzi = Paparazzi(
+        deviceConfig = SQUARE_WATCH_192DP,
         maxPercentDifference = CLOCK_TOLERANCE
     )
 

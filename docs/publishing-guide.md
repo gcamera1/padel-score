@@ -15,8 +15,8 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | wear | 350110203 | 1.1.0 | 35 | ✅ Publicada (Envío 15) |
 | mobile | **360120000** | **1.2.0** | **36** | ✅ Publicada (27/08/2026, Envío 17) — invitación a calificar |
 | wear | 350120003 | 1.2.0 | 35 | ✅ Publicada (07/09/2026, Envío 19) — fix crash Android 16 + sensibilidad |
-| wear | **350130003** | **1.3.0** | 35 | 🕐 Lista para enviar (08/09/2026) — atrás como pila, cancha negra, calificar |
-| mobile | **360130000** | **1.3.0** | 36 | 🕐 Lista para enviar (08/09/2026) — cancha negra + "Instalar en el reloj" |
+| wear | **350130003** | **1.3.0** | 35 | 🕐 En revisión (enviada 08/09/2026) — atrás como pila, cancha negra, calificar |
+| mobile | **360130000** | **1.3.0** | 36 | 🕐 En revisión (enviada 08/09/2026) — cancha negra + "Instalar en el reloj" |
 
 Las dos van **en un mismo envío**, a diferencia de las anteriores que viajaron sueltas: la
 sección "Instalar en el reloj" del teléfono depende de que el reloj anuncie su capability, y

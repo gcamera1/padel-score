@@ -1033,7 +1033,35 @@ Seguimiento post-release: mirar Android vitals en ~2 semanas y confirmar que el 
 `ForegroundServiceStartNotAllowedException` quedó clavado en 19 (filtro "Todos los fallos",
 no el default de percibidos).
 
-### Release 6 — migración de toolchain
+### Release 6 — 1.3.0 en los dos módulos · 🕐 EN REVISIÓN (08/09/2026)
+
+Primer envío con **los dos form factors juntos**, a diferencia de todos los anteriores que
+viajaron sueltos: la sección "Instalar en el reloj" del teléfono depende de que el reloj
+anuncie su capability, y esa capability recién existe en la 1.3.0 del reloj.
+
+Contenido:
+
+- **wear**: el botón físico de atrás y el deslizamiento desandan una pila real de pantallas
+  (`WearNavStack`) en vez de salir siempre al menú del reloj.
+- **wear + mobile**: cancha negra como quinta opción de color.
+- **mobile**: sección RELOJ en Ajustes con "Instalar en el reloj", que abre Google Play en el
+  reloj vinculado.
+- **wear**: calificar la app — opción permanente en Ajustes más invitación automática tras 3
+  partidos, máximo 2 apariciones.
+- **mobile**: el tope de pedidos de calificación sube de 3 a 5, y la versión aparece al pie de
+  Ajustes.
+
+Un bug que casi se publica: el shrinker de recursos vaciaba `android_wear_capabilities` en el
+build de release. Nadie la referencia —Play Services la busca por nombre en runtime— así que
+la app se habría publicado sin anunciarse y el teléfono nunca habría detectado al reloj. Es
+**invisible probando en debug**, que no pasa por el shrinker. Se arregló con `res/raw/keep.xml`
+en ambos módulos; el chequeo previo al envío quedó en `CLAUDE.md` y en la guía de publicación.
+
+Seguimiento: confirmar en un par de días que "Instalar en el reloj" **desaparece** del teléfono
+una vez que las dos versiones estén instaladas. Si sigue apareciendo con la app puesta en el
+reloj, la capability no está llegando y hay que volver a mirar el AAB.
+
+### Release 7 — migración de toolchain
 
 AGP / Kotlin 2.x / Compose BOM / Paparazzi 2.x, y recién ahí `compileSdk 36`. Va sola, sin
 mezclar con cambios funcionales, porque lo que rompe es la UI y los screenshot tests al mismo

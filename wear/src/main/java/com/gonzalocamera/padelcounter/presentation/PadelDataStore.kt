@@ -17,6 +17,7 @@ import com.gonzalocamera.padelcounter.shared.Decider
 import com.gonzalocamera.padelcounter.shared.PadelState
 import com.gonzalocamera.padelcounter.shared.ScoringMode
 import com.gonzalocamera.padelcounter.shared.StrokeSensitivity
+import com.gonzalocamera.padelcounter.shared.WearReviewState
 
 private val Context.dataStore by preferencesDataStore(name = "padel_counter")
 
@@ -52,6 +53,10 @@ class PadelRepository(private val context: Context) {
         val HAS_SEEN_WALKTHROUGH = booleanPreferencesKey("has_seen_walkthrough")
         val STARTUP_COMPANION_PROMPT_COUNT = intPreferencesKey("startup_companion_prompt_count")
         val MATCHEND_COMPANION_PROMPT_COUNT = intPreferencesKey("matchend_companion_prompt_count")
+
+        val FINISHED_MATCH_COUNT = intPreferencesKey("finished_match_count")
+        val RATING_PROMPT_COUNT = intPreferencesKey("rating_prompt_count")
+        val RATED = booleanPreferencesKey("rated_from_wear")
 
         val STROKE_ENABLED = booleanPreferencesKey("stroke_counting_enabled")
         val STROKE_SENS = stringPreferencesKey("stroke_sensitivity")
@@ -147,6 +152,36 @@ class PadelRepository(private val context: Context) {
 
     val matchEndCompanionPromptCount: Flow<Int> = context.dataStore.data.map { prefs ->
         prefs[Keys.MATCHEND_COMPANION_PROMPT_COUNT] ?: 0
+    }
+
+    /**
+     * Estado del pedido de calificación. El contador de partidos arranca en 0 para quien ya
+     * venía usando la app: los partidos anteriores a esta versión no se pueden recuperar (el
+     * reloj no guarda historial, lo manda al teléfono y lo olvida), así que la invitación le
+     * va a llegar tres partidos después de actualizar. Es aceptable y evita inventar datos.
+     */
+    val reviewState: Flow<WearReviewState> = context.dataStore.data.map { prefs ->
+        WearReviewState(
+            finishedMatches = prefs[Keys.FINISHED_MATCH_COUNT] ?: 0,
+            promptsShown = prefs[Keys.RATING_PROMPT_COUNT] ?: 0,
+            rated = prefs[Keys.RATED] ?: false,
+        )
+    }
+
+    suspend fun incrementFinishedMatchCount() {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.FINISHED_MATCH_COUNT] = (prefs[Keys.FINISHED_MATCH_COUNT] ?: 0) + 1
+        }
+    }
+
+    suspend fun incrementRatingPromptCount() {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.RATING_PROMPT_COUNT] = (prefs[Keys.RATING_PROMPT_COUNT] ?: 0) + 1
+        }
+    }
+
+    suspend fun setRated() {
+        context.dataStore.edit { prefs -> prefs[Keys.RATED] = true }
     }
 
     suspend fun incrementMatchEndCompanionPromptCount() {

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.StarOutline
+import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,15 +33,21 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.gonzalocamera.padelcounter.mobile.data.UserPreferences
 import com.gonzalocamera.padelcounter.mobile.ui.components.CourtColorThumb
+import com.gonzalocamera.padelcounter.mobile.sync.SyncBridgeClient
+import com.gonzalocamera.padelcounter.mobile.sync.WatchStatus
 import com.gonzalocamera.padelcounter.mobile.ui.components.SectionHeader
 import com.gonzalocamera.padelcounter.mobile.ui.rating.openPlayStoreListing
 import com.gonzalocamera.padelcounter.shared.CourtColorOption
@@ -82,6 +89,7 @@ private fun courtColorLabel(option: CourtColorOption): String = when (option) {
     CourtColorOption.ORANGE -> "Naranja"
     CourtColorOption.GREEN -> "Verde"
     CourtColorOption.PURPLE -> "Violeta"
+    CourtColorOption.BLACK -> "Negro"
 }
 
 private fun categoryLabel(category: PadelCategory): String = when (category) {
@@ -98,6 +106,13 @@ fun SettingsScreen(
     val prefs by viewModel.preferences.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // El bloque "Instalar en el reloj" se resuelve al abrir Ajustes y no una vez por proceso:
+    // el usuario pudo vincular un reloj, o instalar la app en él, desde la última visita.
+    val hasWearMatches by viewModel.hasWearMatches.collectAsState()
+    val bridge = remember(context) { SyncBridgeClient(context) }
+    var watchStatus by remember { mutableStateOf(WatchStatus.UNKNOWN) }
+    LaunchedEffect(Unit) { watchStatus = bridge.watchStatus() }
 
     // SAF: el usuario elige dónde guardar / qué abrir, así que no hacen falta permisos
     // de almacenamiento y el archivo queda visible en la app Archivos del teléfono.
@@ -143,6 +158,20 @@ fun SettingsScreen(
 
     SettingsContent(
         prefs = prefs,
+        // Solo si hay un reloj vinculado SIN la app: al que no tiene reloj no se le ofrece
+        // nada, y UNKNOWN (sin Servicios de Google Play) también calla — acá el lado seguro
+        // de equivocarse es no mostrar, al revés que en el reloj, donde el teléfono siempre está.
+        showInstallOnWatch = watchStatus == WatchStatus.WATCH_NO_APP && !hasWearMatches,
+        onInstallOnWatch = {
+            scope.launch {
+                val ok = bridge.openInstallOnWatch()
+                Toast.makeText(
+                    context,
+                    if (ok) "Seguí en Google Play, en el reloj" else "No pude abrir el reloj",
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+        },
         onKeepScreenOnChange = viewModel::setKeepScreenOn,
         onCourtColorChange = viewModel::setCourtColor,
         onThemeChange = viewModel::setThemeMode,
@@ -165,6 +194,8 @@ fun SettingsScreen(
 @Composable
 internal fun SettingsContent(
     prefs: UserPreferences,
+    showInstallOnWatch: Boolean = false,
+    onInstallOnWatch: () -> Unit = {},
     onKeepScreenOnChange: (Boolean) -> Unit = {},
     onCourtColorChange: (CourtColorOption) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit = {},
@@ -188,6 +219,35 @@ internal fun SettingsContent(
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onBackground,
         )
+
+        // Primera sección y no una más al fondo: es la única opción de Ajustes que descubre
+        // una funcionalidad entera que el usuario puede no saber que existe. Desaparece sola
+        // cuando la app ya está en el reloj, así que no le roba el lugar a nadie más.
+        if (showInstallOnWatch) {
+            Column {
+                SectionHeader("RELOJ")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Tenés un reloj Wear OS vinculado. Con la app en el reloj anotás " +
+                        "los puntos desde la muñeca y el partido se guarda solo acá.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onInstallOnWatch,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Watch,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Instalar en el reloj")
+                }
+            }
+        }
 
         Column {
             SectionHeader("PANTALLA")

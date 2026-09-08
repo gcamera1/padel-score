@@ -102,6 +102,8 @@ dependencies {
 
     // Google Play Services Wearable
     implementation(libs.play.services.wearable)
+    // RemoteActivityHelper: abrir Play en el reloj desde el teléfono
+    implementation(libs.wear.remote.interactions)
     implementation(libs.kotlinx.coroutines.play.services)
 
     // Kotlin libraries

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `android_wear_capabilities` no lo referencia nadie: Play Services lo busca por nombre en
+  tiempo de ejecución. Para el shrinker de recursos es basura y en el build de release le
+  vacía el valor, dejando la app sin anunciar su capability — el otro dispositivo nunca la
+  detecta y el bug es invisible en debug, que no pasa por el shrinker.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@array/android_wear_capabilities" />

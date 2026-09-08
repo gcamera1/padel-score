@@ -57,7 +57,28 @@ serialization (`MatchCodec`), stroke detection (`StrokeDetector`), and stroke st
 - **Gotcha:** `StrokeSensitivity.thresholdMs2()` maps High/Medium/Low → threshold (non-obvious API)
 
 ### `:wear` (Wear OS, API 30-35, Compose for Wear)
-Single-activity with screens navigated via `mutableStateOf` + `AnimatedVisibility`. **No ViewModel, no DI.**
+Single-activity with screens navigated via `WearNavStack` + `AnimatedVisibility`. **No ViewModel, no DI.**
+- **Design:** back is a real stack, not a screen→parent map: "Nuevo partido" is reachable from
+  both Ajustes and the match-finished screen and must return to whichever opened it. A single
+  `BackHandler` covers the hardware button *and* the edge swipe (Wear delivers swipe-to-dismiss
+  as back); it is disabled on the root screens (counter, match-finished) so the system takes
+  over and exits to the watch face. `nav.openRoot()` is for match-state jumps (match started /
+  finished), which clear the stack. Covered by `WearNavStackTest`
+- **Design:** `Modifier.swipeBack` adds the same left→right gesture away from the edge, on every
+  non-root screen. On the counter the drag only opens Ajustes right→left: the other direction is
+  left free because it means "back" (and step 7 of the tutorial promises exactly that)
+- **Gotcha:** `android_wear_capabilities` (the string-array both modules use to announce
+  themselves to the other form factor) is looked up **by name at runtime** by Play Services —
+  nothing references it, so `isShrinkResources` empties its value in release while keeping the
+  array name. The app then never announces its capability and the other device never detects
+  it, and the bug is invisible in debug, which skips the shrinker. `res/raw/keep.xml` in each
+  module pins it; verify with `grep -c verify_remote_padel_<wear|phone>_app` on the AAB's
+  `base/resources.pb` before publishing
+- **Design:** the watch has its own rating prompt, independent from the phone's: `WearReviewPolicy`
+  (`:shared`, pure) gates it on 3 finished matches, max 2 appearances, never with a match started
+  (in play *or* finished-pending-summary — otherwise the app opens on the summary and the overlay,
+  which only draws over the counter, would burn an appearance unseen). State is watch-local and
+  deliberately not synced with the phone. One prompt per startup: the companion one wins
 - **Design:** `StrokeCounterService` is a foreground service (`foregroundServiceType="health"`); strokes accumulate in `StrokeCounter` (in-memory singleton, DataStore backup per game)
 - **Constraint:** `ScreenMetrics` adapts layout for round vs square — `fw² + fh² ≤ 1.0`
 

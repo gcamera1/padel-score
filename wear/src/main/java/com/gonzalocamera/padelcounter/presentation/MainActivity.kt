@@ -5,6 +5,7 @@ import androidx.compose.ui.text.style.TextAlign
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
 import androidx.compose.foundation.Canvas
@@ -31,10 +32,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import androidx.wear.compose.material.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
 import kotlin.math.abs
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.painterResource
 import com.gonzalocamera.padelcounter.BuildConfig
@@ -62,6 +65,7 @@ import com.gonzalocamera.padelcounter.shared.Winner
 import com.gonzalocamera.padelcounter.sync.WearSyncQueue
 import com.gonzalocamera.padelcounter.sync.WearSyncSender
 import com.gonzalocamera.padelcounter.shared.StrokeSensitivity
+import com.gonzalocamera.padelcounter.shared.WearReviewPolicy
 import com.gonzalocamera.padelcounter.shared.StrokeDetector
 import com.gonzalocamera.padelcounter.shared.thresholdMs2
 import android.content.Context
@@ -241,7 +245,82 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { COUNTER, SETTINGS, NEW_MATCH, TUTORIAL, WALKTHROUGH, MATCH_FINISHED, STROKE_TEST }
+internal enum class Screen { COUNTER, SETTINGS, NEW_MATCH, TUTORIAL, WALKTHROUGH, MATCH_FINISHED, STROKE_TEST }
+
+/**
+ * Pila de navegación de la app del reloj.
+ *
+ * Existe porque el "atrás" no se puede derivar de la pantalla actual: a "Nuevo partido" se
+ * llega desde Ajustes y también desde la pantalla de fin de partido, y tiene que volver a
+ * la que lo abrió. Una pila lo resuelve; un mapa pantalla→padre, no.
+ *
+ * [openRoot] es para los saltos que no son navegación sino cambio de estado del partido
+ * (arrancó uno nuevo, terminó el que había): esas pantallas son raíz y desde ellas el
+ * atrás sale al menú del reloj, así que la pila se vacía.
+ */
+internal class WearNavStack(initial: Screen) {
+    var current by mutableStateOf(initial)
+        private set
+
+    private val stack = mutableStateListOf<Screen>()
+
+    /** true si hay a dónde volver dentro de la app (false en las pantallas raíz). */
+    val canGoBack: Boolean get() = stack.isNotEmpty()
+
+    fun open(target: Screen) {
+        stack.add(current)
+        current = target
+    }
+
+    fun back() {
+        if (stack.isNotEmpty()) current = stack.removeAt(stack.lastIndex)
+    }
+
+    fun openRoot(target: Screen) {
+        stack.clear()
+        current = target
+    }
+}
+
+/**
+ * Gesto de "volver" deslizando de izquierda a derecha, la convención de Wear OS.
+ *
+ * El gesto nativo del sistema solo se dispara desde el borde izquierdo de la pantalla;
+ * este cubre el resto, para que el swipe funcione arrancando desde cualquier punto. Los
+ * hijos que tienen su propio `detectHorizontalDragGestures` (selector de color, de
+ * sensibilidad) consumen el evento antes de que llegue acá y siguen ganando.
+ */
+@Composable
+internal fun Modifier.swipeBack(onBack: () -> Unit): Modifier {
+    val haptic = LocalHapticFeedback.current
+    val currentOnBack by rememberUpdatedState(onBack)
+    return this.pointerInput(Unit) {
+        var accum = 0f
+        detectHorizontalDragGestures(
+            onDragStart = { accum = 0f },
+            onHorizontalDrag = { _, amount -> accum += amount },
+            onDragEnd = {
+                if (accum >= SWIPE_BACK_THRESHOLD_PX) {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    currentOnBack()
+                }
+                accum = 0f
+            }
+        )
+    }
+}
+
+private const val SWIPE_BACK_THRESHOLD_PX = 110f
+
+/** Techo para la consulta del vínculo con el teléfono al arrancar. */
+private const val COMPANION_DETECT_TIMEOUT_MS = 3_000L
+
+/**
+ * Pantallas sobre las que se dibuja la invitación a calificar: la cancha y el resumen del
+ * partido. Si no incluyera el resumen, el aviso se decidiría al arrancar pero nunca se vería,
+ * porque es justo la pantalla donde arranca la app cuando quedó un partido sin cerrar.
+ */
+private val RATING_PROMPT_SCREENS = setOf(Screen.COUNTER, Screen.MATCH_FINISHED)
 
 @Composable
 private fun PadelApp() {
@@ -259,7 +338,7 @@ private fun PadelApp() {
         else act.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
-    var screen by remember { mutableStateOf(Screen.COUNTER) }
+    val nav = remember { WearNavStack(Screen.COUNTER) }
     var previousState by remember { mutableStateOf<PadelState?>(null) }
     var matchSynced by remember { mutableStateOf(false) }
 
@@ -267,6 +346,7 @@ private fun PadelApp() {
     var companionStatus by remember { mutableStateOf(CompanionStatus.UNKNOWN) }
     var showCompanionPrompt by remember { mutableStateOf(false) }
     var showMatchEndCompanionHint by remember { mutableStateOf(false) }
+    var showRatingPrompt by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         syncSender.trySendPending()
@@ -275,12 +355,37 @@ private fun PadelApp() {
     // Aviso al arrancar (máx 3 veces): si hay teléfono sin la app, o no hay teléfono.
     LaunchedEffect(hasSeenWalkthrough) {
         if (!hasSeenWalkthrough) return@LaunchedEffect
-        val status = CompanionDetector.detect(context)
+        // Con techo de tiempo: `detect` consulta al teléfono por Bluetooth y puede tardar
+        // mucho —o no volver—. Sin este límite arrastraba consigo todo lo que venga después
+        // en la corrutina, incluido el aviso de calificar.
+        val status = withTimeoutOrNull(COMPANION_DETECT_TIMEOUT_MS) {
+            CompanionDetector.detect(context)
+        } ?: CompanionStatus.UNKNOWN
         companionStatus = status
         val shows = status == CompanionStatus.PHONE_NO_APP || status == CompanionStatus.NO_PHONE
-        if (shows && repo.startupCompanionPromptCount.first() < 3) {
+        val companionShown = shows && repo.startupCompanionPromptCount.first() < 3
+        if (companionShown) {
             repo.incrementStartupCompanionPromptCount()
             showCompanionPrompt = true
+        }
+
+        // Un solo aviso por arranque: el de instalar la app de teléfono tiene prioridad
+        // porque desbloquea el historial; el de calificar puede esperar al próximo.
+        if (companionShown) return@LaunchedEffect
+
+        // El estado se lee del disco y no del `state` de la composición: en este punto el
+        // flow todavía puede estar en su valor inicial (un PadelState() vacío), que se ve
+        // igual que "sin partido en curso" y dispararía el aviso a mitad de partido.
+        //
+        // Solo bloquea el partido EN JUEGO. Uno terminado sin cerrar deja al usuario en el
+        // resumen, y ahí el aviso sí corresponde: es donde queda después de su último
+        // partido, así que excluirlo —como hacía la primera versión de esta condición—
+        // volvía la invitación inalcanzable en el uso real.
+        val persisted = repo.stateFlow.first()
+        val matchInProgress = isMatchInProgress(persisted)
+        if (WearReviewPolicy.shouldPrompt(repo.reviewState.first(), matchInProgress)) {
+            repo.incrementRatingPromptCount()
+            showRatingPrompt = true
         }
     }
 
@@ -296,7 +401,7 @@ private fun PadelApp() {
     }
 
     LaunchedEffect(state.mySets, state.oppSets) {
-        if (isMatchFinished(state) && screen == Screen.COUNTER && !matchSynced) {
+        if (isMatchFinished(state) && nav.current == Screen.COUNTER && !matchSynced) {
             matchSynced = true
             context.stopService(Intent(context, StrokeCounterService::class.java))
             val strokes = if (state.strokeCountingEnabled) {
@@ -325,6 +430,9 @@ private fun PadelApp() {
                 )
                 syncQueue.enqueue(match)
                 syncSender.trySendPending()
+                // Dentro del `firstTime`: los re-disparos del efecto en cada arranque en frío
+                // no deben volver a contar el mismo partido.
+                repo.incrementFinishedMatchCount()
             }
             StrokeCounter.reset()
             repo.clearStrokeBackup()
@@ -336,7 +444,7 @@ private fun PadelApp() {
                 repo.incrementMatchEndCompanionPromptCount()
                 true
             } else false
-            screen = Screen.MATCH_FINISHED
+            nav.openRoot(Screen.MATCH_FINISHED)
         }
     }
 
@@ -348,9 +456,15 @@ private fun PadelApp() {
         return
     }
 
+    // Un solo handler cubre el botón físico Y el deslizamiento desde el borde: Wear OS
+    // entrega el swipe-to-dismiss como un "atrás". Deshabilitado en las pantallas raíz
+    // (cancha y fin de partido), donde no hay a dónde volver y el sistema hace lo suyo:
+    // salir al menú del reloj.
+    BackHandler(enabled = nav.canGoBack) { nav.back() }
+
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
-            visible = screen == Screen.COUNTER,
+            visible = nav.current == Screen.COUNTER,
             enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
             modifier = Modifier.fillMaxSize()
@@ -368,12 +482,12 @@ private fun PadelApp() {
                         scope.launch { repo.save(prev) }
                     }
                 },
-                onOpenSettings = { screen = Screen.SETTINGS }
+                onOpenSettings = { nav.open(Screen.SETTINGS) }
             )
         }
 
         AnimatedVisibility(
-            visible = screen == Screen.SETTINGS,
+            visible = nav.current == Screen.SETTINGS,
             enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
             modifier = Modifier.fillMaxSize()
@@ -384,28 +498,36 @@ private fun PadelApp() {
                 onCourtColorChange = { scope.launch { repo.setCourtColor(it) } },
                 onToggleStrokeCounting = { scope.launch { repo.setStrokeCountingEnabled(it) } },
                 onStrokeSensitivityChange = { scope.launch { repo.setStrokeSensitivity(it) } },
-                onTestCounter = { screen = Screen.STROKE_TEST },
-                onNewMatch = { screen = Screen.NEW_MATCH },
-                onTutorial = { screen = Screen.TUTORIAL },
-                onInstallPhoneApp = { scope.launch { CompanionDetector.openInstallOnPhone(context) } },
-                onBack = { screen = Screen.COUNTER }
+                onTestCounter = { nav.open(Screen.STROKE_TEST) },
+                onNewMatch = { nav.open(Screen.NEW_MATCH) },
+                onTutorial = { nav.open(Screen.TUTORIAL) },
+                onInstallPhoneApp = { scope.launch { CompanionDetector.openListingOnPhone(context) } },
+                onRateApp = {
+                    // Quien va a calificar desde Ajustes no necesita que después lo inviten:
+                    // se corta la invitación automática, pero la opción sigue acá para siempre.
+                    scope.launch {
+                        repo.setRated()
+                        announceRating(context, openRatingListing(context))
+                    }
+                },
+                onBack = { nav.back() }
             )
         }
 
         AnimatedVisibility(
-            visible = screen == Screen.STROKE_TEST,
+            visible = nav.current == Screen.STROKE_TEST,
             enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
             modifier = Modifier.fillMaxSize()
         ) {
             StrokeTestScreen(
                 state = state,
-                onBack = { screen = Screen.SETTINGS }
+                onBack = { nav.back() }
             )
         }
 
         AnimatedVisibility(
-            visible = screen == Screen.NEW_MATCH,
+            visible = nav.current == Screen.NEW_MATCH,
             enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
             modifier = Modifier.fillMaxSize()
@@ -423,35 +545,35 @@ private fun PadelApp() {
                             bestOf = bestOf
                         )
                     }
-                    screen = Screen.COUNTER
+                    nav.openRoot(Screen.COUNTER)
                 },
-                onCancel = { screen = Screen.SETTINGS }
+                onCancel = { nav.back() }
             )
         }
 
         AnimatedVisibility(
-            visible = screen == Screen.TUTORIAL,
+            visible = nav.current == Screen.TUTORIAL,
             enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
             modifier = Modifier.fillMaxSize()
         ) {
             TutorialScreen(
-                onBack = { screen = Screen.SETTINGS },
-                onWalkthrough = { screen = Screen.WALKTHROUGH }
+                onBack = { nav.back() },
+                onWalkthrough = { nav.open(Screen.WALKTHROUGH) }
             )
         }
 
         AnimatedVisibility(
-            visible = screen == Screen.WALKTHROUGH,
+            visible = nav.current == Screen.WALKTHROUGH,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.fillMaxSize()
         ) {
-            WalkthroughScreen(onFinish = { screen = Screen.TUTORIAL })
+            WalkthroughScreen(onFinish = { nav.back() })
         }
 
         AnimatedVisibility(
-            visible = screen == Screen.MATCH_FINISHED,
+            visible = nav.current == Screen.MATCH_FINISHED,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.fillMaxSize()
@@ -459,7 +581,7 @@ private fun PadelApp() {
             MatchFinishedScreen(
                 state = state,
                 showCompanionHint = showMatchEndCompanionHint,
-                onInstallPhoneApp = { scope.launch { CompanionDetector.openInstallOnPhone(context) } },
+                onInstallPhoneApp = { scope.launch { CompanionDetector.openListingOnPhone(context) } },
                 onPlayAgain = {
                     matchSynced = false
                     showMatchEndCompanionHint = false
@@ -471,19 +593,49 @@ private fun PadelApp() {
                             bestOf = state.bestOf
                         )
                     }
-                    screen = Screen.COUNTER
+                    nav.openRoot(Screen.COUNTER)
                 },
                 onNewMatch = {
                     matchSynced = false
                     showMatchEndCompanionHint = false
-                    screen = Screen.NEW_MATCH
+                    nav.open(Screen.NEW_MATCH)
                 }
             )
         }
 
-        // Overlay de aviso "instalá la app de teléfono" al arrancar (solo sobre COUNTER).
+        // Invitación a calificar: overlay sobre la cancha al arrancar, nunca a mitad de
+        // partido ni encima del aviso de companion (ver la decisión en el LaunchedEffect).
+        BackHandler(enabled = showRatingPrompt && nav.current in RATING_PROMPT_SCREENS) {
+            showRatingPrompt = false
+        }
+
         AnimatedVisibility(
-            visible = showCompanionPrompt && screen == Screen.COUNTER,
+            visible = showRatingPrompt && nav.current in RATING_PROMPT_SCREENS,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            RatePromptScreen(
+                onRate = {
+                    showRatingPrompt = false
+                    scope.launch {
+                        repo.setRated()
+                        announceRating(context, openRatingListing(context))
+                    }
+                },
+                onLater = { showRatingPrompt = false }
+            )
+        }
+
+        // Overlay de aviso "instalá la app de teléfono" al arrancar (solo sobre COUNTER).
+        // Se declara después del handler global para ganarle la prioridad: mientras el aviso
+        // está arriba, el atrás lo cierra en vez de salir de la app.
+        BackHandler(enabled = showCompanionPrompt && nav.current == Screen.COUNTER) {
+            showCompanionPrompt = false
+        }
+
+        AnimatedVisibility(
+            visible = showCompanionPrompt && nav.current == Screen.COUNTER,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.fillMaxSize()
@@ -491,7 +643,7 @@ private fun PadelApp() {
             CompanionPromptScreen(
                 status = companionStatus,
                 onInstall = {
-                    scope.launch { CompanionDetector.openInstallOnPhone(context) }
+                    scope.launch { CompanionDetector.openListingOnPhone(context) }
                     showCompanionPrompt = false
                 },
                 onDismiss = { showCompanionPrompt = false }
@@ -516,7 +668,9 @@ internal fun CounterScreen(
     val myGreen = Color(0xFF00C853)
     val oppRed = Color(0xFFFF5252)
 
-    // Swipe para ir a Ajustes
+    // Deslizar hacia la IZQUIERDA abre Ajustes. La otra dirección queda libre a propósito:
+    // izquierda→derecha es "volver" en Wear OS, y en la cancha —que es la pantalla raíz—
+    // eso significa salir al menú del reloj. Es además lo que promete el paso 7 del tutorial.
     var dragAccum by remember { mutableStateOf(0f) }
     val swipeThresholdPx = 110f
 
@@ -532,7 +686,7 @@ internal fun CounterScreen(
                         onDragStart = { dragAccum = 0f },
                         onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
                         onDragEnd = {
-                            if (abs(dragAccum) >= swipeThresholdPx) {
+                            if (dragAccum <= -swipeThresholdPx) {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onOpenSettings()
                             }
@@ -906,6 +1060,16 @@ private fun CourtBackgroundVertical(
     }
 }
 
+/**
+ * Partido **en juego**: con saque elegido y todavía sin terminar.
+ *
+ * Un partido terminado y sin cerrar NO lo es, aunque tenga `isServeSet`: el usuario está
+ * mirando el resumen, no jugando. Confundir los dos es lo que dejó la invitación a calificar
+ * sin aparecer nunca, porque el resumen es donde queda todo el mundo tras su último partido.
+ */
+internal fun isMatchInProgress(state: PadelState): Boolean =
+    state.isServeSet && !isMatchFinished(state)
+
 internal fun isMatchStart(state: PadelState): Boolean =
     state.mySets == 0 && state.oppSets == 0 &&
     state.myGames == 0 && state.oppGames == 0 &&
@@ -925,12 +1089,10 @@ private fun SettingsScreen(
     onNewMatch: () -> Unit,
     onTutorial: () -> Unit,
     onInstallPhoneApp: () -> Unit,
+    onRateApp: () -> Unit,
     onBack: () -> Unit
 ) {
     val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
-    val haptic = LocalHapticFeedback.current
-    var swipeDragAccum by remember { mutableStateOf(0f) }
-    val swipeThresholdPx = 110f
 
     Scaffold(
         timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
@@ -940,19 +1102,7 @@ private fun SettingsScreen(
         ScalingLazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { swipeDragAccum = 0f },
-                        onHorizontalDrag = { _, dragAmount -> swipeDragAccum += dragAmount },
-                        onDragEnd = {
-                            if (swipeDragAccum >= swipeThresholdPx) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onBack()
-                            }
-                            swipeDragAccum = 0f
-                        }
-                    )
-                },
+                .swipeBack(onBack),
             state = listState,
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -970,7 +1120,8 @@ private fun SettingsScreen(
                     Triple(CourtColorOption.GREEN, "Verde", courtColorToColor(CourtColorOption.GREEN)),
                     Triple(CourtColorOption.ORANGE, "Naranja", courtColorToColor(CourtColorOption.ORANGE)),
                     Triple(CourtColorOption.PURPLE, "Violeta", courtColorToColor(CourtColorOption.PURPLE)),
-                    Triple(CourtColorOption.BLUE, "Azul", courtColorToColor(CourtColorOption.BLUE))
+                    Triple(CourtColorOption.BLUE, "Azul", courtColorToColor(CourtColorOption.BLUE)),
+                    Triple(CourtColorOption.BLACK, "Negro", courtColorToColor(CourtColorOption.BLACK))
                 )
 
                 fun idxFor(opt: CourtColorOption): Int = when (opt) {
@@ -978,6 +1129,7 @@ private fun SettingsScreen(
                     CourtColorOption.ORANGE -> 1
                     CourtColorOption.PURPLE -> 2
                     CourtColorOption.BLUE -> 3
+                    CourtColorOption.BLACK -> 4
                 }
 
                 var dragAccum by remember { mutableStateOf(0f) }
@@ -1033,11 +1185,13 @@ private fun SettingsScreen(
                                     horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
+                                    // El contorno existe por el negro: sin él, su muestra
+                                    // se pierde contra el fondo oscuro del chip.
                                     Box(
                                         modifier = Modifier
                                             .size(10.dp)
-                                            .clip(RoundedCornerShape(50))
-                                            .background(clr)
+                                            .background(clr, RoundedCornerShape(50))
+                                            .border(1.dp, WearBrand.TextFaint, RoundedCornerShape(50))
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Text(lbl)
@@ -1098,6 +1252,7 @@ private fun SettingsScreen(
 
             item { WideTextButton("Tutorial", onTutorial, primary = false) }
             item { WideTextButton("Instalar app en el teléfono", onInstallPhoneApp, primary = false) }
+            item { WideTextButton("⭐ Calificar la app", onRateApp, primary = false) }
             item { WideTextButton("Volver", onBack, primary = false) }
             item {
                 // Del BuildConfig, no hardcodeado: estaba fijo en "v1.0.0" y con el bump
@@ -1308,9 +1463,6 @@ private val TUTORIAL_STEPS = listOf(
 @Composable
 private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
     val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
-    val haptic = LocalHapticFeedback.current
-    var swipeDragAccum by remember { mutableStateOf(0f) }
-    val swipeThresholdPx = 110f
 
     Scaffold(
         timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
@@ -1320,19 +1472,7 @@ private fun TutorialScreen(onBack: () -> Unit, onWalkthrough: () -> Unit) {
         ScalingLazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { swipeDragAccum = 0f },
-                        onHorizontalDrag = { _, dragAmount -> swipeDragAccum += dragAmount },
-                        onDragEnd = {
-                            if (swipeDragAccum >= swipeThresholdPx) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onBack()
-                            }
-                            swipeDragAccum = 0f
-                        }
-                    )
-                },
+                .swipeBack(onBack),
             state = listState,
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = roundSafeContentPadding(),
@@ -1384,7 +1524,9 @@ private fun NewMatchScreen(
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) }
     ) {
         ScalingLazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .swipeBack(onCancel),
             state = listState,
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1630,6 +1772,43 @@ private fun CompanionPromptScreen(
     }
 }
 
+/**
+ * Invitación a calificar. Misma forma que [CompanionPromptScreen]: `ScalingLazyColumn` para
+ * que el texto pueda crecer con la fuente del sistema sin que los botones queden fuera de la
+ * vista (WO-V1), y `WideTextButton` en vez de `Button`, que en Wear es circular.
+ */
+@Composable
+private fun RatePromptScreen(onRate: () -> Unit, onLater: () -> Unit) {
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
+
+    Scaffold(timeText = { TimeText(modifier = Modifier.scrollAway(listState)) }) {
+        ScalingLazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            state = listState,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = roundSafeContentPadding(),
+            verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)
+        ) {
+            item {
+                Text(
+                    text = "¿Te gusta Simple Padel Score? ⭐",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = WearBrand.Gold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp)
+                )
+            }
+            item { WideTextButton("Calificar", onRate) }
+            item { WideTextButton("Ahora no", onLater, primary = false) }
+        }
+    }
+}
+
 @Composable
 private fun SensitivitySelector(
     current: StrokeSensitivity,
@@ -1766,20 +1945,7 @@ private fun StrokeTestScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(metrics.courtPadding)
-                .pointerInput(Unit) {
-                    var drag = 0f
-                    detectHorizontalDragGestures(
-                        onDragStart = { drag = 0f },
-                        onHorizontalDrag = { _, amount -> drag += amount },
-                        onDragEnd = {
-                            if (drag >= 110f) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onBack()
-                            }
-                            drag = 0f
-                        }
-                    )
-                }
+                .swipeBack(onBack)
         ) {
             // Cancha centrada con las mismas fracciones/clip que el partido (CounterScreen).
             Box(

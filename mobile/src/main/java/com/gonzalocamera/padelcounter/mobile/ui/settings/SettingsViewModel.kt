@@ -7,6 +7,7 @@ import com.gonzalocamera.padelcounter.mobile.data.UserPreferences
 import com.gonzalocamera.padelcounter.shared.ArchiveDecodeException
 import com.gonzalocamera.padelcounter.shared.CourtColorOption
 import com.gonzalocamera.padelcounter.shared.MatchArchive
+import com.gonzalocamera.padelcounter.shared.MatchOrigin
 import com.gonzalocamera.padelcounter.shared.PadelCategory
 import com.gonzalocamera.padelcounter.shared.ReviewPolicy
 import com.gonzalocamera.padelcounter.shared.ThemeMode
@@ -15,6 +16,7 @@ import com.gonzalocamera.padelcounter.shared.encodeArchive
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -29,6 +31,18 @@ class SettingsViewModel(private val repository: MatchRepository) : ViewModel() {
 
     val preferences: StateFlow<UserPreferences> = repository.userPreferences
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserPreferences())
+
+    /**
+     * Guarda de transición para el bloque "Instalar en el reloj".
+     *
+     * La app del reloj recién anuncia su capability a partir de esta versión, así que en un
+     * reloj con una anterior la detección la da por ausente aunque esté instalada. Si el
+     * historial ya tiene partidos que llegaron del reloj, la app está (o estuvo) ahí y no
+     * hay nada que ofrecer.
+     */
+    val hasWearMatches: StateFlow<Boolean> = repository.matchHistory
+        .map { history -> history.any { it.origin == MatchOrigin.WEAR } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun setKeepScreenOn(enabled: Boolean) {
         updatePrefs { it.copy(keepScreenOn = enabled) }

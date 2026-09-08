@@ -405,6 +405,18 @@ class MobileScreenshot_Settings {
         }
     }
 
+    /**
+     * Bloque "RELOJ": solo aparece con un reloj vinculado sin la app, así que es una rama que
+     * ningún otro snapshot cubre — y va primero, antes de PANTALLA.
+     */
+    @Test fun settingsWithWatchPrompt() {
+        paparazzi.snapshot {
+            PadelMobileTheme {
+                SettingsContent(prefs = UserPreferences(), showInstallOnWatch = true)
+            }
+        }
+    }
+
     @Test fun settingsCustom() {
         paparazzi.snapshot {
             PadelMobileTheme {

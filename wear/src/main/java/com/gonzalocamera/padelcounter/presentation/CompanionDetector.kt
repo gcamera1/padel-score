@@ -54,8 +54,10 @@ object CompanionDetector {
     /**
      * Abre la ficha de la app en Google Play en el teléfono vinculado usando
      * RemoteActivityHelper. Devuelve true si la acción remota se lanzó bien.
+     *
+     * La misma ficha sirve para instalar y para calificar: es una sola con dos form factors.
      */
-    suspend fun openInstallOnPhone(context: Context): Boolean = suspendCancellableCoroutine { cont ->
+    suspend fun openListingOnPhone(context: Context): Boolean = suspendCancellableCoroutine { cont ->
         val directExecutor = Executor { it.run() }
         try {
             val intent = Intent(Intent.ACTION_VIEW)

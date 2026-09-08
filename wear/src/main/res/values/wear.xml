@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Capability que anuncia la app del reloj para que la del teléfono pueda detectar
+         que ya está instalada (vía CapabilityClient) y no ofrecer instalarla de nuevo.
+         Es el espejo de `verify_remote_padel_phone_app`, declarado en :mobile. -->
+    <string-array name="android_wear_capabilities">
+        <item>verify_remote_padel_wear_app</item>
+    </string-array>
+</resources>

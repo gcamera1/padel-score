@@ -43,7 +43,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.gonzalocamera.padelcounter.mobile.BuildConfig
 import com.gonzalocamera.padelcounter.mobile.data.UserPreferences
 import com.gonzalocamera.padelcounter.mobile.ui.components.CourtColorThumb
 import com.gonzalocamera.padelcounter.mobile.sync.SyncBridgeClient
@@ -205,6 +207,9 @@ internal fun SettingsContent(
     onImportHistory: () -> Unit = {},
     onContactUs: () -> Unit = {},
     onRateApp: () -> Unit = {},
+    // Parámetro y no `BuildConfig` leído acá adentro: si no, cada bump de versión rompería
+    // los snapshots de Paparazzi de esta pantalla y habría que regrabarlos a ciegas.
+    versionName: String = BuildConfig.VERSION_NAME,
 ) {
     Column(
         modifier = Modifier
@@ -401,6 +406,15 @@ internal fun SettingsContent(
                 Text("Contactanos")
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "v$versionName",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
     }

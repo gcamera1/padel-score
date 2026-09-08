@@ -394,13 +394,16 @@ class MobileScreenshot_Stats {
     }
 }
 
+/** Fijo a propósito: si saliera de BuildConfig, cada bump de versión rompería estos snapshots. */
+private const val SNAPSHOT_VERSION = "0.0.0"
+
 class MobileScreenshot_Settings {
     @get:Rule val paparazzi = Paparazzi(deviceConfig = PIXEL_6)
 
     @Test fun settingsDefault() {
         paparazzi.snapshot {
             PadelMobileTheme {
-                SettingsContent(prefs = UserPreferences())
+                SettingsContent(prefs = UserPreferences(), versionName = SNAPSHOT_VERSION)
             }
         }
     }
@@ -412,7 +415,7 @@ class MobileScreenshot_Settings {
     @Test fun settingsWithWatchPrompt() {
         paparazzi.snapshot {
             PadelMobileTheme {
-                SettingsContent(prefs = UserPreferences(), showInstallOnWatch = true)
+                SettingsContent(prefs = UserPreferences(), showInstallOnWatch = true, versionName = SNAPSHOT_VERSION)
             }
         }
     }
@@ -426,7 +429,8 @@ class MobileScreenshot_Settings {
                         courtColor = CourtColorOption.PURPLE,
                         defaultDecider = Decider.SUPER10,
                         defaultScoringMode = ScoringMode.GOLDEN_POINT
-                    )
+                    ),
+                    versionName = SNAPSHOT_VERSION,
                 )
             }
         }

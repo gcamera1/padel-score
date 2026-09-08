@@ -50,6 +50,9 @@ android {
 
     buildFeatures {
         compose = true
+        // Para mostrar el versionName real al pie de Ajustes en vez de un string a mano,
+        // que es como el módulo :wear ya llegó a mostrar una versión equivocada.
+        buildConfig = true
     }
 
     composeOptions {

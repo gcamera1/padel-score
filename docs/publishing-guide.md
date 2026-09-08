@@ -16,7 +16,17 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | mobile | **360120000** | **1.2.0** | **36** | ✅ Publicada (27/08/2026, Envío 17) — invitación a calificar |
 | wear | 350120003 | 1.2.0 | 35 | ✅ Publicada (07/09/2026, Envío 19) — fix crash Android 16 + sensibilidad |
 | wear | **350130003** | **1.3.0** | 35 | 🕐 Lista para enviar (08/09/2026) — atrás como pila, cancha negra, calificar |
-| mobile | 360130000 | 1.3.0 | 36 | ⏸ Construida pero sin enviar — cancha negra + "Instalar en el reloj" |
+| mobile | **360130000** | **1.3.0** | 36 | 🕐 Lista para enviar (08/09/2026) — cancha negra + "Instalar en el reloj" |
+
+Las dos van **en un mismo envío**, a diferencia de las anteriores que viajaron sueltas: la
+sección "Instalar en el reloj" del teléfono depende de que el reloj anuncie su capability, y
+esa capability recién existe en la 1.3.0 del reloj. Publicar solo el teléfono dejaría el
+bloque ofreciendo instalar una app que ya está puesta, hasta que el reloj se actualice.
+
+**Antes de cada envío, verificar que el shrinker no vació la capability** (ver el gotcha en
+`CLAUDE.md`): descomprimir el AAB y `grep -c verify_remote_padel_<wear|phone>_app` sobre
+`base/resources.pb`. Tiene que dar 1; si da 0, la app se publica sin anunciarse y el otro
+dispositivo nunca la detecta.
 
 Los cambios de ficha (nombre a "Simple Padel Score: Marcador", descripción y capturas, es-419)
 viajaron solos como **Envío 16** y quedaron **publicados el 20/08/2026**. Recién con eso

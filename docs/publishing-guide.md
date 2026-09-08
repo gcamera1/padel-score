@@ -14,7 +14,9 @@ el del teléfono y el del reloj. Cada form factor se publica en su propio track.
 | mobile | 360110100 | 1.1.0 | **36** | ✅ Publicada (12/08/2026, Envío 14) |
 | wear | 350110203 | 1.1.0 | 35 | ✅ Publicada (Envío 15) |
 | mobile | **360120000** | **1.2.0** | **36** | ✅ Publicada (27/08/2026, Envío 17) — invitación a calificar |
-| wear | **350120003** | **1.2.0** | 35 | ✅ Publicada (07/09/2026, Envío 19) — fix crash Android 16 + sensibilidad |
+| wear | 350120003 | 1.2.0 | 35 | ✅ Publicada (07/09/2026, Envío 19) — fix crash Android 16 + sensibilidad |
+| wear | **350130003** | **1.3.0** | 35 | 🕐 Lista para enviar (08/09/2026) — atrás como pila, cancha negra, calificar |
+| mobile | 360130000 | 1.3.0 | 36 | ⏸ Construida pero sin enviar — cancha negra + "Instalar en el reloj" |
 
 Los cambios de ficha (nombre a "Simple Padel Score: Marcador", descripción y capturas, es-419)
 viajaron solos como **Envío 16** y quedaron **publicados el 20/08/2026**. Recién con eso

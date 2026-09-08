@@ -787,8 +787,31 @@ Pendiente:
 de Google, como envío propio: en Actividad de envíos figura como **"Ficha de Play Store"** (así
 viajó el Envío 10 del 31/07).
 
-**Estado medido el 12/08/2026:** `10+` descargas, **sin reseñas ni valoración**. Categoría
-Deportes.
+**Estado medido el 08/09/2026** (Play Console → KPIs, datos al 03/09):
+
+| Métrica | Valor | Promedio 28 días |
+|---|---|---|
+| Instalaciones totales | **92** | — |
+| Dispositivos activos | **56** | 34 |
+| Usuarios activos por día | 8 | 2,96 |
+| Visitantes en la ficha | 8/día | 8,61 |
+| Adquisiciones desde la ficha | 2/día | 1,89 |
+| **Conversión desde la ficha** | 25,0 % | **20,3 %** |
+| Calificaciones | **1, de 5 estrellas** | — |
+
+La calificación pública todavía no se muestra: Play necesita un mínimo de valoraciones antes
+de publicar el promedio.
+
+**Cómo leer esto — la restricción NO es la conversión, es el tráfico.** El 20,3 % de conversión
+está en el rango normal para una app de nicho, y de 92 instalaciones quedan 56 dispositivos
+activos (61 % retenidas), que para una app que se abre solo cuando jugás es buena señal. El
+problema es que **solo ~9 personas por día llegan a ver la ficha**. Con ese caudal, cualquier
+esfuerzo puesto en mejorar la conversión o en pedir calificaciones más seguido mueve números
+que ya están bien; lo que falta es que la ficha se encuentre.
+
+**Nota metodológica:** hasta el 08/09/2026 esta sección decía `10+` descargas, medido el
+12/08. Razonar sobre ese dato viejo llevó a subestimar la base por 4,5x al analizar por qué no
+llegaban calificaciones. Actualizar estos números antes de sacar conclusiones.
 
 ### Lo que ya está bien — verificado sobre la ficha real
 

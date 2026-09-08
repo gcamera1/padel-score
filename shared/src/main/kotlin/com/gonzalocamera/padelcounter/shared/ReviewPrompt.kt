@@ -60,8 +60,14 @@ object ReviewPolicy {
     /** Además de esperar, tiene que haber seguido usando la app. */
     const val SNOOZE_SCORE_DELTA = 4
 
-    /** Techo duro: tres pedidos en la vida de la instalación y listo. */
-    const val MAX_PROMPTS = 3
+    /**
+     * Techo duro de pedidos en la vida de la instalación.
+     *
+     * No son cinco seguidos: entre uno y el siguiente hay que pasar por "Más tarde" y
+     * cumplir [SNOOZE_DAYS] más [SNOOZE_SCORE_DELTA], así que llegar al tope lleva meses de
+     * uso sostenido. Un "No, gracias" corta antes, en el primero.
+     */
+    const val MAX_PROMPTS = 5
 
     const val DAY_MS = 24L * 60 * 60 * 1000
 

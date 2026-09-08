@@ -96,7 +96,7 @@ class ReviewPolicyTest {
     }
 
     @Test
-    fun `tres mas tarde agotan el cupo`() {
+    fun `agotar el cupo de mas tarde cierra el tema`() {
         var state = eligible()
         repeat(ReviewPolicy.MAX_PROMPTS) { i ->
             state = ReviewPolicy.snooze(state, now + i * 30 * day)
